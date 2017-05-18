@@ -1,5 +1,7 @@
-# PyCharm stuff
-.idea/
+# PyCharm IDE
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/dictionaries
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
