@@ -36,7 +36,7 @@ def naive_fully_connected(hidden_layers: int, past_days: int, days_to_future: in
              The output is a term structure in ``days_to_future``.
              The model is not yet compiled.
     """
-    input = keras.layers.Input(shape=(9, past_days), name="input")
+    input = keras.layers.Input(shape=(past_days, 9), name="input")
     hidden = keras.layers.Flatten()(input)
     hidden = keras.layers.Dropout(rate=0.2, name="input_dropout")(hidden)
     for _ in range(hidden_layers):
