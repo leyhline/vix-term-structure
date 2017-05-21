@@ -25,7 +25,7 @@ def naive_fully_connected(hidden_layers: int, past_days: int, days_to_future: in
     
     Though the main problem here is will be certainly overfitting. There is not much data,
     its not augmented and the model itself if because of its verbosity prone to overfitting.
-    I'll try to counter this with heavy dropout regularization (even on the inputs).
+    I'll try to counter this with dropout regularization.
     
     :param hidden_layers: Number of hidden layers.
     :param past_days: How many days to look into the past.
@@ -36,12 +36,13 @@ def naive_fully_connected(hidden_layers: int, past_days: int, days_to_future: in
              The output is a term structure in ``days_to_future``.
              The model is not yet compiled.
     """
+    initializer = keras.initializers.glorot_normal()
+    activation = keras.activations.relu
     input = keras.layers.Input(shape=(past_days, 9), name="input")
     hidden = keras.layers.Flatten()(input)
-    hidden = keras.layers.Dropout(rate=0.2, name="input_dropout")(hidden)
     for _ in range(hidden_layers):
-        hidden = keras.layers.Dense(9 * past_days, activation="relu")(hidden)
+        hidden = keras.layers.Dense(9 * past_days, activation=activation, kernel_initializer=initializer)(hidden)
         hidden = keras.layers.Dropout(rate=0.5)(hidden)
-    output = keras.layers.Dense(8, activation="relu", name="output")(hidden)
+    output = keras.layers.Dense(8, activation=activation, name="output", kernel_initializer=initializer)(hidden)
     model = keras.models.Model(inputs=input, outputs=output)
     return model

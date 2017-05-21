@@ -5,12 +5,15 @@ from typing import Tuple, Iterator
 
 import pandas as pd
 import numpy as np
+import tensorflow.contrib.keras as keras
+
 import vixstructure.models as models
 
 
 def get_model(hidden_layers, past_days, days_to_future):
     model = models.naive_fully_connected(hidden_layers, past_days, days_to_future)
-    model.compile("SGD", "mean_squared_error")
+    sgd = keras.optimizers.SGD(0.01)
+    model.compile(sgd, keras.losses.mean_squared_error, metrics=['accuracy'])
     return model
 
 
@@ -19,7 +22,9 @@ def data_generator(data: np.ndarray, past_days: int, days_to_future: int
     # TODO Specify batch size.
     while True:  # Generator should loop indefinitely.
         for i in range(past_days, len(data) - days_to_future):
-            yield data[i-past_days:i], data[i+days_to_future]
+            # Expand dimension --> batch size of 1
+            yield (np.expand_dims(data[i-past_days:i], axis=0),
+                   np.expand_dims(data[i+days_to_future,1:], axis=0))
 
 
 def get_data(past_days: int, days_to_future: int,
@@ -52,6 +57,10 @@ def get_data(past_days: int, days_to_future: int,
     vix = pd.read_csv("vix.csv", usecols=[0,5], parse_dates=[0], header=0, index_col=0,
                       na_values=["null", 0], dtype = np.float32)
     training = pd.merge(vix, xm_settle, left_index=True, right_index=True)
+    # Normalize the data
+    mean = training.mean()
+    ptp = training.max() - training.min()
+    training = (training - mean) / ptp
     # The training data has now the shape (N, 9).
     if min_index and min_index >= len(training):
         logging.warning(f"min_index is greater than length of data {len(training)}. Ignore.")
@@ -73,12 +82,18 @@ def get_data(past_days: int, days_to_future: int,
             (nr_samples_validation, data_generator(validation, past_days, days_to_future)))
 
 
-if __name__ == "__main__":
-    hidden_layers = 5
-    past_days = 7
-    days_to_future = 7
+def train(hidden_layers, past_days, days_to_future, verbose=1):
+    repr_string = f"{hidden_layers}_{past_days}_{days_to_future}"
     testset, validationset = get_data(past_days, days_to_future)
     model = get_model(hidden_layers, past_days, days_to_future)
-    model.fit_generator(testset[1], testset[0], epochs=5,
-                        validation_data=validationset[1], validation_steps=validationset[0])
-    model.save(f"naive_{hidden_layers}_{past_days}_{days_to_future}.hdf5")
+    history = model.fit_generator(testset[1], testset[0], epochs=100, verbose=verbose,
+                                  validation_data=validationset[1], validation_steps=validationset[0],
+                                  callbacks=[keras.callbacks.CSVLogger(f"training_{repr_string}.log")])
+    model.save(f"naive_{repr_string}.hdf5")
+    return history
+
+
+if __name__ == "__main__":
+    for i in range(1, 11):
+        print(f"Training with {i} hidden layer.")
+        train(i, 7, 7, 2)
