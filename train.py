@@ -52,9 +52,9 @@ def get_data(past_days: int, days_to_future: int,
     if min_index: assert min_index >= 0
     if max_index: assert min_index < max_index
     # Load and merge the data.
-    xm_settle = pd.read_csv("8_m_settle.csv", usecols=range(1, 10), dtype=np.float32,
+    xm_settle = pd.read_csv("data/8_m_settle.csv", usecols=range(1, 10), dtype=np.float32,
                             parse_dates=[0], header=0, index_col=0, na_values=0)
-    vix = pd.read_csv("vix.csv", usecols=[0,5], parse_dates=[0], header=0, index_col=0,
+    vix = pd.read_csv("data/vix.csv", usecols=[0,5], parse_dates=[0], header=0, index_col=0,
                       na_values=["null", 0], dtype = np.float32)
     training = pd.merge(vix, xm_settle, left_index=True, right_index=True)
     # Normalize the data
