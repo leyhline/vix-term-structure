@@ -3,16 +3,19 @@
 import logging
 from typing import Tuple, Iterator
 
-import pandas as pd
 import numpy as np
-import tensorflow.contrib.keras as keras
+import keras
 
 import vixstructure.models as models
+import vixstructure.data as data
 
 
-def get_model(hidden_layers, past_days, days_to_future):
+
+
+
+def get_model(hidden_layers, past_days, days_to_future, step_size=0.01):
     model = models.naive_fully_connected(hidden_layers, past_days, days_to_future)
-    sgd = keras.optimizers.SGD(0.01)
+    sgd = keras.optimizers.SGD(step_size)
     model.compile(sgd, keras.losses.mean_squared_error, metrics=['accuracy'])
     return model
 
@@ -27,7 +30,7 @@ def data_generator(data: np.ndarray, past_days: int, days_to_future: int
                    np.expand_dims(data[i+days_to_future,1:], axis=0))
 
 
-def get_data(past_days: int, days_to_future: int,
+def get_data_generators(past_days: int, days_to_future: int,
              split: float=0.80, min_index: int=None, max_index: int=None,
              ) -> Tuple[
                     Tuple[int, Iterator[np.ndarray]],
@@ -51,17 +54,8 @@ def get_data(past_days: int, days_to_future: int,
     assert 0. < split < 1.
     if min_index: assert min_index >= 0
     if max_index: assert min_index < max_index
-    # Load and merge the data.
-    xm_settle = pd.read_csv("data/8_m_settle.csv", usecols=range(1, 10), dtype=np.float32,
-                            parse_dates=[0], header=0, index_col=0, na_values=0)
-    vix = pd.read_csv("data/vix.csv", usecols=[0,5], parse_dates=[0], header=0, index_col=0,
-                      na_values=["null", 0], dtype = np.float32)
-    training = pd.merge(vix, xm_settle, left_index=True, right_index=True)
-    # Normalize the data
-    mean = training.mean()
-    ptp = training.max() - training.min()
-    training = (training - mean) / ptp
-    # The training data has now the shape (N, 9).
+    training = data.get_data(normalized=True)
+    # Check indixes.
     if min_index and min_index >= len(training):
         logging.warning(f"min_index is greater than length of data {len(training)}. Ignore.")
         min_index = None
@@ -82,15 +76,25 @@ def get_data(past_days: int, days_to_future: int,
             (nr_samples_validation, data_generator(validation, past_days, days_to_future)))
 
 
-def train(hidden_layers, past_days, days_to_future, verbose=1):
+def train(hidden_layers, past_days, days_to_future, epochs=100, verbose=1):
     repr_string = f"{hidden_layers}_{past_days}_{days_to_future}"
-    testset, validationset = get_data(past_days, days_to_future)
+    (testlen, testgen), (vallen, valgen) = get_data_generators(past_days, days_to_future)
     model = get_model(hidden_layers, past_days, days_to_future)
-    history = model.fit_generator(testset[1], testset[0], epochs=100, verbose=verbose,
-                                  validation_data=validationset[1], validation_steps=validationset[0],
-                                  callbacks=[keras.callbacks.CSVLogger(f"training_{repr_string}.log")])
-    model.save(f"naive_{repr_string}.hdf5")
-    return history
+    history = model.fit_generator(testgen, testlen, epochs=epochs, verbose=verbose,
+                                  validation_data=valgen, validation_steps=vallen,
+                                  callbacks=[keras.callbacks.CSVLogger(f"./logs/naive-fully-connected/training_{repr_string}.log"),
+                                             keras.callbacks.TensorBoard("./logs/tensorboard")])
+    model.save(f"./models/naive-fully-connected/naive_{repr_string}.hdf5")
+    return model, history
+
+
+def validate(model, past_days: int,
+             min_index: int=-70, max_index: int=None):
+    test_data = data.get_data(normalized=True).iloc[min_index:max_index].fillna(0).values
+    max_index = 0 if not max_index else max_index
+    test_batch = np.reshape(test_data, ((max_index - min_index) // past_days, past_days, 9))
+    preds = model.predict(test_batch)
+    return preds
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ to see what captures the existing data the best.
 :copyright: (c) 2017 Thomas Leyh
 """
 
-import tensorflow.contrib.keras as keras
+import keras
 
 
 def naive_fully_connected(hidden_layers: int, past_days: int, days_to_future: int):
@@ -37,7 +37,7 @@ def naive_fully_connected(hidden_layers: int, past_days: int, days_to_future: in
              The model is not yet compiled.
     """
     initializer = keras.initializers.glorot_normal()
-    activation = keras.activations.relu
+    activation = keras.activations.tanh
     input = keras.layers.Input(shape=(past_days, 9), name="input")
     hidden = keras.layers.Flatten()(input)
     for _ in range(hidden_layers):
