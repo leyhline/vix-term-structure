@@ -104,3 +104,4 @@ ENV/
 
 # Custom
 config.ini
+logs/tensorboard

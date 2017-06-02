@@ -1,5 +1,6 @@
 # TODO Logging and Tests are essential!
 
+import sys
 import logging
 from typing import Tuple, Iterator
 
@@ -98,6 +99,15 @@ def validate(model, past_days: int,
 
 
 if __name__ == "__main__":
-    for i in range(1, 11):
+    if len(sys.argv) != 3:
+        print("Usage: train.py x y (where range(x,y) is the number of hidden layers)")
+        print("Defaulting to 5 networks in range(1,6).")
+        x = 1
+        y = 6
+    else:
+        x = int(sys.argv[1])
+        y = int(sys.argv[2])
+    print(f"Training {y-x} networks in range({x},{y}).")
+    for i in range(x, y):
         print(f"Training with {i} hidden layer.")
-        train(i, 7, 7, 2)
+        train(i, 7, 7, 100, 2)
