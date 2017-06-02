@@ -2,6 +2,7 @@
 
 import sys
 import logging
+import random
 from typing import Tuple, Iterator
 
 import numpy as np
@@ -21,11 +22,15 @@ def get_model(hidden_layers, past_days, days_to_future, step_size=0.01):
     return model
 
 
-def data_generator(data: np.ndarray, past_days: int, days_to_future: int
+def data_generator(data: np.ndarray, past_days: int, days_to_future: int,
+                   shuffle: bool=False
                    ) -> Iterator[np.ndarray]:
     # TODO Specify batch size.
+    index_range = list(range(past_days, len(data) - days_to_future))
     while True:  # Generator should loop indefinitely.
-        for i in range(past_days, len(data) - days_to_future):
+        if shuffle:
+            random.shuffle(index_range)
+        for i in index_range:
             # Expand dimension --> batch size of 1
             yield (np.expand_dims(data[i-past_days:i], axis=0),
                    np.expand_dims(data[i+days_to_future,1:], axis=0))
@@ -51,7 +56,6 @@ def get_data_generators(past_days: int, days_to_future: int,
              1. tuple: (number of unique training samples, training data generator)
              2. tuple: (number of unique validation samples, validation data generator)
     """
-    # TODO Think about a way to shuffle the data
     assert 0. < split < 1.
     if min_index: assert min_index >= 0
     if max_index: assert min_index < max_index
@@ -73,7 +77,7 @@ def get_data_generators(past_days: int, days_to_future: int,
     training = training[:split_index]
     nr_samples_training = len(training) - past_days - days_to_future
     assert nr_samples_training > 0
-    return ((nr_samples_training, data_generator(training, past_days, days_to_future)),
+    return ((nr_samples_training, data_generator(training, past_days, days_to_future, shuffle=True)),
             (nr_samples_validation, data_generator(validation, past_days, days_to_future)))
 
 
@@ -85,6 +89,7 @@ def train(hidden_layers, past_days, days_to_future, epochs=100, verbose=1):
                                   validation_data=valgen, validation_steps=vallen,
                                   callbacks=[keras.callbacks.CSVLogger(f"./logs/naive-fully-connected/training_{repr_string}.log"),
                                              keras.callbacks.TensorBoard("./logs/tensorboard")])
+                                             #keras.callbacks.EarlyStopping(min_delta=1e-5, patience=5, verbose=1)])
     model.save(f"./models/naive-fully-connected/naive_{repr_string}.hdf5")
     return model, history
 
