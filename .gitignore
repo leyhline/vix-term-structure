@@ -106,3 +106,5 @@ ENV/
 config.ini
 logs/tensorboard
 *.*~
+*.png
+*.mp4
