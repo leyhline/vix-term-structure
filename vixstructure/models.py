@@ -7,7 +7,9 @@ to see what captures the existing data the best.
 :copyright: (c) 2017 Thomas Leyh
 """
 
-import keras
+from typing import Optional
+
+import tensorflow.contrib.keras as keras
 
 
 def naive_fully_connected(hidden_layers: int, past_days: int, days_to_future: int):
@@ -44,5 +46,19 @@ def naive_fully_connected(hidden_layers: int, past_days: int, days_to_future: in
         hidden = keras.layers.Dense(9 * past_days, activation=activation, kernel_initializer=initializer)(hidden)
         hidden = keras.layers.Dropout(rate=0.5)(hidden)
     output = keras.layers.Dense(8, activation=activation, name="output", kernel_initializer=initializer)(hidden)
+    model = keras.models.Model(inputs=input, outputs=output)
+    return model
+
+
+def spread_price_prediction(hidden_layers: int, data_length: int, dropout: Optional[float]):
+    initializer = keras.initializers.glorot_uniform()
+    activation = keras.activations.relu
+    input = keras.layers.Input(shape=(data_length,), name="input")
+    hidden = input
+    for _ in range(hidden_layers):
+        hidden = keras.layers.Dense(data_length, activation=activation, kernel_initializer=initializer)(hidden)
+        if dropout:
+            hidden = keras.layers.Dropout(rate=dropout)(hidden)
+    output = keras.layers.Dense(data_length, activation=activation, name="output", kernel_initializer=initializer)(hidden)
     model = keras.models.Model(inputs=input, outputs=output)
     return model
