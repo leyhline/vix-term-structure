@@ -56,7 +56,7 @@ if __name__ == "__main__":
     # for i in range(x, y):
     #     print(f"Training with {i} hidden layer.")
     #     train(i)
-    for layer in range(1, 11):
+    for layer in range(8, 11):
         for dropout in (None, 0.5):
             for stepsize in (0.01, 0.003, 0.001, 0.0003, 0.0001):
                 print("Train model with {} hidden layers, dropout is {}, stepsize {}.".format(layer, dropout, stepsize))
