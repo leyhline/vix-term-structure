@@ -1,4 +1,7 @@
+#!/usr/bin/env python3
+
 import sys
+import socket
 
 import tensorflow.contrib.keras as keras
 import pandas as pd
@@ -37,10 +40,10 @@ def train(hidden_layers, dropout=None, epochs=50, verbose=1, validation_split=0.
     x_val = term_structure.values[splitsize:]
     y_val = spread_prices.values[splitsize:]
     model = get_model(hidden_layers, sgd_step_size, dropout)
-    repr_string = "training_{}_{}_{}".format(hidden_layers, "nodropout" if not dropout else dropout, sgd_step_size)
+    repr_string = "training_{}_{}_{}_{}".format(hidden_layers, "nodropout" if not dropout else dropout, sgd_step_size, socket.gethostname())
     history = model.fit(x_train, y_train, 1, epochs=epochs, verbose=verbose, validation_data=(x_val, y_val), shuffle=True,
                         callbacks=[keras.callbacks.CSVLogger("./logs/predict_spread_prices/{}.csv".format(repr_string))])
-    return model, history
+    model.save("./models/predict_spread_prices/{}.hdf5".format(repr_string))
 
 
 if __name__ == "__main__":
