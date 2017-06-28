@@ -20,17 +20,20 @@ from lazy import lazy
 # See analysis.ipynb
 # Before this date there are too many NaN values.
 FIRST_DATE = "2006-10-23"
+LAST_DATE = None
 KWARGS = dict(usecols=range(1,10), dtype=np.float32, parse_dates=[0], header=0, index_col=0, na_values=0)
 
 
 class Data:
-    def __init__(self, path, use_standard_kwargs=True, first_index=FIRST_DATE, **kwargs):
+    def __init__(self, path, use_standard_kwargs=True,
+                 first_index=FIRST_DATE, last_index=LAST_DATE, **kwargs):
         """
         Specify parameters for reading the data from path.
         :param path: The relative path to the data file. Should be a csv.
         :param use_standard_kwargs:
             Most of the files have the same structure and you can therefore use
-            the global KWARGS. If True (default) then the given kwargs are overwritten.
+            the global KWARGS. If True (default) then you can still overwrite these
+            with the local kwargs argument.
         :param first_index:
             The first index where reading the data makes sense because often there is
             too much noise (speak: NaN) at the beginning. This is a DataFrame index and
@@ -41,13 +44,16 @@ class Data:
         assert os.path.exists(path)
         self.filename = path
         if use_standard_kwargs:
-            kwargs.update(KWARGS)
-        self.kwargs = kwargs
+            self.kwargs = KWARGS.copy()
+            self.kwargs.update(kwargs)
+        else:
+            self.kwargs = kwargs
         self.first_index = first_index
+        self.last_index = last_index
 
     @lazy
     def data_frame(self) -> pd.DataFrame:
-        return pd.read_csv(self.filename, **self.kwargs).loc[self.first_index:]
+        return pd.read_csv(self.filename, **self.kwargs).loc[self.first_index:self.last_index]
 
 
 ################################################################
