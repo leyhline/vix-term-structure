@@ -72,6 +72,13 @@ class TestDatasets(unittest.TestCase):
         self.assertEqual(x.shape, (2655, 9))
         self.assertEqual(y.shape, (2655, 6))
 
+    def test_data_normalization(self):
+        x, y = long_prices_dataset("../../data/8_m_settle.csv", "../../data/expirations.csv", normalize=True)
+        self.assertGreater(x.min(), -1)
+        self.assertLess(x.max(), 1)
+        self.assertGreater(y.min(), -1)
+        self.assertLess(y.max(), 1)
+
 
 if __name__ == '__main__':
     unittest.main()

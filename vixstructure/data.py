@@ -115,11 +115,21 @@ class TermStructure(Data):
         return pd.Series(longs, term[1:-1].index)
 
 
-def long_prices_dataset(term_structure_path, expirations_path) -> Tuple[np.ndarray, np.ndarray]:
+def normalize_data(data: pd.DataFrame) -> pd.DataFrame:
+    mean = data.mean()
+    ptp = data.max() - data.min()
+    return (data - mean) / ptp
+
+
+def long_prices_dataset(term_structure_path, expirations_path,
+                        normalize=False) -> Tuple[np.ndarray, np.ndarray]:
     expi = Expirations(expirations_path)
     ts = TermStructure(term_structure_path, expi)
     x = ts.diff.join(expi.days_to_expiration)
     y = ts.long_prices
+    if normalize:
+        x = normalize_data(x)
+        y = normalize_data(y)
     assert x.index.identical(y.index)
     return x.iloc[:-1].fillna(0).values, y.iloc[1:].fillna(0).values
 
