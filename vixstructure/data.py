@@ -10,6 +10,7 @@ The data here is lazily loaded.
 import os
 import random
 import logging
+import operator
 from typing import Tuple, Iterator, Union
 
 import pandas as pd
@@ -54,6 +55,64 @@ class Data:
     @lazy
     def data_frame(self) -> pd.DataFrame:
         return pd.read_csv(self.filename, **self.kwargs).loc[self.first_index:self.last_index]
+
+
+class Expirations(Data):
+    def __init__(self, path):
+        super(Expirations, self).__init__(path, dtype=None, parse_dates=list(range(0,9)))
+
+    @lazy
+    def for_first_leg(self):
+        return self.data_frame["V1"]
+
+    @lazy
+    def days_to_expiration(self):
+        until_expiration = pd.Series(self.for_first_leg.values - self.for_first_leg.index.values,
+                                     index=self.for_first_leg.index)
+        return until_expiration.map(operator.attrgetter("days")).astype(np.float32)
+
+
+class TermStructure(Data):
+    def __init__(self, path, expirations: Expirations=None):
+        self.expirations = expirations
+        super(TermStructure, self).__init__(path)
+
+    @lazy
+    def diff(self):
+        diff = self.data_frame.diff(axis=1).iloc[:,1:]
+        diff = diff.join(self.data_frame.iloc[:,0])
+        return diff.iloc[:,range(-1,7)]
+
+    @lazy
+    def long_prices(self):
+        assert self.expirations, "expirations need to be given in constructor"
+        spreads = self.data_frame.copy()
+        # First get the index of all dates where the expiration is in 0 days
+        expiration_indices = self.expirations.days_to_expiration
+        assert spreads.index.identical(expiration_indices.index)
+        expiration_indices = expiration_indices.where(expiration_indices == 0.0)
+        expiration_indices.index = range(len(expiration_indices))
+        expiration_indices = expiration_indices.dropna().index
+        # The day after a future expired the spread prices shift to the right
+        if expiration_indices[-1] == len(spreads) - 1:
+            shift_end = -1
+        else:
+            shift_end = None
+        spreads.iloc[expiration_indices[:shift_end] + 1] = spreads.iloc[expiration_indices[:shift_end] + 1].iloc[:, 1:].assign(
+            M1=lambda x: np.NaN).iloc[:, range(-1, 7)]
+        assert len(spreads[spreads.M1.isnull() == True]) == len(expiration_indices) + 0 if not shift_end else shift_end
+        spreads = spreads.apply(self._calculate_long_prices, axis=1)
+        return spreads
+
+    @staticmethod
+    def _calculate_long_prices(term: pd.Series):
+        """
+        Calculate the spread prices for long positions for one term structure.
+        :param term: A term structure as time series.
+        :return: The spread prices for each leg except the ones on each side.
+        """
+        longs = [2*term[i] - term[i-1] - term[i+1] for i in range(1, len(term)-1)]
+        return pd.Series(longs, term[1:-1].index)
 
 
 ################################################################
