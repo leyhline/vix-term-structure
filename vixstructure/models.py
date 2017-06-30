@@ -12,6 +12,24 @@ from typing import Optional
 import tensorflow.contrib.keras as keras
 
 
+def term_structure_to_spread_price(hidden_layers, dropout=None,
+                                   input_data_length=9, output_data_length=6):
+    activation = keras.activations.relu
+    input = keras.layers.Input(shape=(input_data_length,), name="input")
+    layer = input
+    for _ in range(hidden_layers):
+        layer = keras.layers.Dense(input_data_length, activation=activation)(layer)
+        if dropout:
+            layer = keras.layers.Dropout(rate=dropout)(layer)
+    output = keras.layers.Dense(output_data_length, activation=activation, name="output")(layer)
+    model = keras.models.Model(inputs=input, outputs=output)
+    return model
+
+
+################################################################
+# This is some old stuff. Try the functions above.
+################################################################
+
 def naive_fully_connected(hidden_layers: int, past_days: int, days_to_future: int):
     """
     This is a simple network consisting of a variable number of fully connected layers.
