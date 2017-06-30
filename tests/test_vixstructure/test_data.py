@@ -4,6 +4,7 @@ import datetime
 import numpy as np
 
 from vixstructure.data import Data, TermStructure, Expirations
+from vixstructure.data import long_prices_dataset
 
 
 class TestData(unittest.TestCase):
@@ -63,6 +64,13 @@ class TestExpirations(unittest.TestCase):
         self.assertEqual(to_expiration.shape, (2656,))
         self.assertGreaterEqual(to_expiration.min(), 0.0)
         self.assertLessEqual(to_expiration.max(), 34.0)
+
+
+class TestDatasets(unittest.TestCase):
+    def test_long_prices_dataset(self):
+        x, y = long_prices_dataset("../../data/8_m_settle.csv", "../../data/expirations.csv")
+        self.assertEqual(x.shape, (2655, 9))
+        self.assertEqual(y.shape, (2655, 6))
 
 
 if __name__ == '__main__':

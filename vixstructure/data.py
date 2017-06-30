@@ -68,7 +68,7 @@ class Expirations(Data):
     @lazy
     def days_to_expiration(self):
         until_expiration = pd.Series(self.for_first_leg.values - self.for_first_leg.index.values,
-                                     index=self.for_first_leg.index)
+                                     index=self.for_first_leg.index, name="DtE")
         return until_expiration.map(operator.attrgetter("days")).astype(np.float32)
 
 
@@ -113,6 +113,15 @@ class TermStructure(Data):
         """
         longs = [2*term[i] - term[i-1] - term[i+1] for i in range(1, len(term)-1)]
         return pd.Series(longs, term[1:-1].index)
+
+
+def long_prices_dataset(term_structure_path, expirations_path) -> Tuple[np.ndarray, np.ndarray]:
+    expi = Expirations(expirations_path)
+    ts = TermStructure(term_structure_path, expi)
+    x = ts.diff.join(expi.days_to_expiration)
+    y = ts.long_prices
+    assert x.index.identical(y.index)
+    return x.iloc[:-1].fillna(0).values, y.iloc[1:].fillna(0).values
 
 
 ################################################################
