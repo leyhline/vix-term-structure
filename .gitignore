@@ -108,3 +108,4 @@ logs/tensorboard
 *.*~
 *.png
 *.mp4
+MNIST_data/
