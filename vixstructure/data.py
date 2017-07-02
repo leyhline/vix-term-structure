@@ -15,6 +15,7 @@ from typing import Tuple, Iterator, Union
 
 import pandas as pd
 import numpy as np
+import tensorflow.contrib.keras as keras
 from lazy import lazy
 
 
@@ -136,6 +137,17 @@ class LongPricesDataset:
     def denormalize_data(self, data: np.ndarray, idx) -> np.ndarray:
         return data * self.ptp[idx].values + self.mean[idx].values
 
+    def denormalized_metric(self, y_true, y_pred):
+        """
+        Calculate mean squared error on denormalized data.
+        :param y_true: Target value.
+        :param y_pred: Predicted value at output.
+        :return: Mean squared error after denormalization.
+        """
+        # See keras/losses.py
+        return keras.backend.mean(keras.backend.square(
+            self.denormalize_data(y_pred, "y") - self.denormalize_data(y_true, "y")), axis=-1)
+
     def dataset(self, with_expirations=True, normalize=False) -> Tuple[np.ndarray, np.ndarray]:
         x = self.term_structure.diff
         y = self.term_structure.long_prices
@@ -146,6 +158,36 @@ class LongPricesDataset:
             y = self.normalize_data(y, "y")
         assert x.index.identical(y.index)
         return x.iloc[:-1].fillna(0).values, y.iloc[1:].fillna(0).values
+
+    def splitted_dataset(self, validation_split: float, test_split: float,
+                         with_expirations=True, normalize=False) -> Tuple[Tuple[np.ndarray, np.ndarray],
+                                                                          Tuple[np.ndarray, np.ndarray],
+                                                                          Tuple[np.ndarray, np.ndarray]]:
+        """
+        Split whole dataset into three parts: training set, cross validation set, test set.
+        For the splits there are values used from the middle and from the end of the data to
+        equal parts.
+        :param validation_split: How large is the part used for validation?
+        :param test_split: How large is the part used for testing?
+        :param with_expirations: Passed to dataset method.
+        :param normalize: Passed to dataset method.
+        :return: Three (x,y)-tuples for the three above mentioned dataset splits.
+        """
+        x, y = self.dataset(with_expirations=with_expirations, normalize=normalize)
+        assert len(x) == len(y)
+        val_length = int(len(x) * validation_split / 2)
+        test_length = int(len(x) * test_split / 2)
+        x_fst = x[:int(len(x) / 2)]
+        x_snd = x[int(len(x) / 2):]
+        y_fst = y[:int(len(y) / 2)]
+        y_snd = y[int(len(y) / 2):]
+        x_train, y_train = (np.append(x_fst[:-(val_length+test_length)], x_snd[:-(val_length+test_length)], axis=0),
+                            np.append(y_fst[:-(val_length+test_length)], y_snd[:-(val_length+test_length)], axis=0))
+        x_val, y_val = (np.append(x_fst[-(val_length+test_length):-test_length], x_snd[-(val_length+test_length):-test_length], axis=0),
+                        np.append(y_fst[-(val_length+test_length):-test_length], y_snd[-(val_length+test_length):-test_length], axis=0))
+        x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
+                          np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
+        return (x_train, y_train), (x_val, y_val), (x_test, y_test)
 
 
 ################################################################
