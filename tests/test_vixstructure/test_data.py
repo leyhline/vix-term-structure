@@ -99,7 +99,7 @@ class TestLongPricesDatasets(unittest.TestCase):
         self.assertLess(y.max().max(), 5)
 
     def test_dataset_split_into_train_test_and_validation_data(self):
-        (x_train, y_train), (x_val, y_val), (x_test, y_test) = self.dataset.splitted_dataset(0.15, 0.15)
+        (x_train, y_train), (x_val, y_val), (x_test, y_test) = self.dataset.splitted_dataset()
         x_train_fst = x_train[:int(len(x_train) / 2)]
         x_train_snd = x_train[int(len(x_train) / 2):]
         x_val_fst = x_val[:int(len(x_val) / 2)]

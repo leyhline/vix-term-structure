@@ -12,13 +12,13 @@ from typing import Optional
 import tensorflow.contrib.keras as keras
 
 
-def term_structure_to_spread_price(hidden_layers, dropout=None,
+def term_structure_to_spread_price(hidden_layers, hidden_layer_width, dropout=None,
                                    input_data_length=9, output_data_length=6):
     activation = keras.activations.relu
     input = keras.layers.Input(shape=(input_data_length,), name="input")
     layer = input
     for _ in range(hidden_layers):
-        layer = keras.layers.Dense(input_data_length, activation=activation)(layer)
+        layer = keras.layers.Dense(hidden_layer_width, activation=activation)(layer)
         if dropout:
             layer = keras.layers.Dropout(rate=dropout)(layer)
     output = keras.layers.Dense(output_data_length, name="output")(layer)

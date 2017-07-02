@@ -159,7 +159,7 @@ class LongPricesDataset:
         assert x.index.identical(y.index)
         return x.iloc[:-1].fillna(0).values, y.iloc[1:].fillna(0).values
 
-    def splitted_dataset(self, validation_split: float, test_split: float,
+    def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15,
                          with_expirations=True, normalize=False) -> Tuple[Tuple[np.ndarray, np.ndarray],
                                                                           Tuple[np.ndarray, np.ndarray],
                                                                           Tuple[np.ndarray, np.ndarray]]:
