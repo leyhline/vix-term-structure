@@ -1,6 +1,8 @@
 import argparse
 import sys
 import os
+import datetime
+import socket
 
 import tensorflow.contrib.keras as keras
 
@@ -34,12 +36,16 @@ def train(args):
               validation_data=(x_val, y_val))
     if args.save:
         try:
-            name = "depth{}_width{}_dropout{}_optim{}_lr{}{}".format(args.network_depth,
-                                                                     args.network_width,
-                                                                     0 if not args.dropout else args.dropout,
-                                                                     args.optimizer,
-                                                                     args.learning_rate,
-                                                                     "_normalized" if args.normalize else "")
+            now = datetime.datetime.now()
+            name = "{}_{}_depth{}_width{}_dropout{:.0e}_optim{}_lr{:.0e}{}".format(
+                now.strftime("%Y%m%d%H%M%S"),
+                socket.gethostname(),
+                args.network_depth,
+                args.network_width,
+                0 if not args.dropout else args.dropout,
+                args.optimizer,
+                args.learning_rate,
+                "_normalized" if args.normalize else "")
             model.save(os.path.join(args.save, name + ".h5"))
         except FileNotFoundError as e:
             print("Could not save the model.", str(e), file=sys.stderr)
