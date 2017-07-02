@@ -21,7 +21,7 @@ def term_structure_to_spread_price(hidden_layers, dropout=None,
         layer = keras.layers.Dense(input_data_length, activation=activation)(layer)
         if dropout:
             layer = keras.layers.Dropout(rate=dropout)(layer)
-    output = keras.layers.Dense(output_data_length, activation=activation, name="output")(layer)
+    output = keras.layers.Dense(output_data_length, name="output")(layer)
     model = keras.models.Model(inputs=input, outputs=output)
     return model
 
