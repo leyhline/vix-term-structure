@@ -22,7 +22,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     model = models.term_structure_to_spread_price(args.hidden_layers, args.dropout)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
-    model.compile(optimizer, "mean_squared_error")
-    x, y = data.long_prices_dataset("data/8_m_settle.csv", "data/expirations.csv", normalize=args.normalize)
+    dataset = data.LongPricesDataset("data/8_m_settle.csv", "data/expirations.csv")
+    x, y = dataset.dataset(normalize=args.normalize)
+    metrics = []
+    if args.normalize:
+        metrics.append(dataset.denorm_mse)
+    model.compile(optimizer, "mean_squared_error", metrics=metrics)
     model.fit(x, y, args.batch_size, args.epochs, verbose=0 if args.quiet else 2,
               validation_split=args.validation_split)

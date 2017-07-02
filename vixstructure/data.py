@@ -137,7 +137,7 @@ class LongPricesDataset:
     def denormalize_data(self, data: np.ndarray, idx) -> np.ndarray:
         return data * self.ptp[idx].values + self.mean[idx].values
 
-    def denormalized_metric(self, y_true, y_pred):
+    def denorm_mse(self, y_true, y_pred):
         """
         Calculate mean squared error on denormalized data.
         :param y_true: Target value.
