@@ -4,7 +4,7 @@ import datetime
 import numpy as np
 
 from vixstructure.data import Data, TermStructure, Expirations
-from vixstructure.data import long_prices_dataset
+from vixstructure.data import LongPricesDataset
 
 
 class TestData(unittest.TestCase):
@@ -34,16 +34,18 @@ class TestData(unittest.TestCase):
 
 
 class TestTermStructure(unittest.TestCase):
+    def setUp(self):
+        self.ts = TermStructure("../../data/8_m_settle.csv")
+        self.expirations = Expirations("../../data/expirations.csv")
+
     def test_settle_diff(self):
-        ts = TermStructure("../../data/8_m_settle.csv")
-        diff = ts.diff
+        diff = self.ts.diff
         self.assertEqual(diff.shape, (2656, 8))
         self.assertTrue((diff.iloc[:,1:].mean() < 1).all())
 
     def test_long_prices(self):
-        expirations = Expirations("../../data/expirations.csv")
-        ts = TermStructure("../../data/8_m_settle.csv", expirations)
-        spreads = ts.long_prices
+        self.ts = TermStructure("../../data/8_m_settle.csv", self.expirations)
+        spreads = self.ts.long_prices
         self.assertEqual(spreads.shape, (2656, 6))
         self.assertTrue((spreads.min() > -14).all())
         self.assertTrue((spreads.max() < 5).all())
@@ -51,34 +53,50 @@ class TestTermStructure(unittest.TestCase):
 
 
 class TestExpirations(unittest.TestCase):
+    def setUp(self):
+        self.expirations = Expirations("../../data/expirations.csv")
+
     def test_for_first_leg(self):
-        expirations = Expirations("../../data/expirations.csv")
-        first_leg = expirations.for_first_leg
+        first_leg = self.expirations.for_first_leg
         self.assertEqual(first_leg.shape, (2656,))
         self.assertTrue(first_leg.dtype.type is np.datetime64)
 
     def test_days_to_expiration(self):
-        expirations = Expirations("../../data/expirations.csv")
-        to_expiration = expirations.days_to_expiration
+        to_expiration = self.expirations.days_to_expiration
         self.assertEqual(to_expiration.dtype.type, np.float32)
         self.assertEqual(to_expiration.shape, (2656,))
         self.assertGreaterEqual(to_expiration.min(), 0.0)
         self.assertLessEqual(to_expiration.max(), 34.0)
 
 
-class TestDatasets(unittest.TestCase):
+class TestLongPricesDatasets(unittest.TestCase):
+    def setUp(self):
+        self.dataset = LongPricesDataset("../../data/8_m_settle.csv", "../../data/expirations.csv")
+
     def test_long_prices_dataset(self):
-        x, y = long_prices_dataset("../../data/8_m_settle.csv", "../../data/expirations.csv")
+        x, y = self.dataset.dataset()
         self.assertEqual(x.shape, (2655, 9))
+        self.assertEqual(y.shape, (2655, 6))
+        x, y = self.dataset.dataset(with_expirations=False)
+        self.assertEqual(x.shape, (2655, 8))
         self.assertEqual(y.shape, (2655, 6))
 
     def test_data_normalization(self):
-        x, y = long_prices_dataset("../../data/8_m_settle.csv", "../../data/expirations.csv", normalize=True)
-        self.assertGreater(x.min(), -1)
-        self.assertLess(x.max(), 1)
-        self.assertGreater(y.min(), -1)
-        self.assertLess(y.max(), 1)
-
+        x_norm, y_norm = self.dataset.dataset(normalize=True)
+        self.assertEqual(x_norm.shape, (2655, 9))
+        self.assertEqual(y_norm.shape, (2655, 6))
+        self.assertGreater(x_norm.min().min(), -1)
+        self.assertLess(x_norm.max().max(), 1)
+        self.assertGreater(y_norm.min().min(), -1)
+        self.assertLess(y_norm.max().max(), 1)
+        x = self.dataset.denormalize_data(x_norm, "x")
+        y = self.dataset.denormalize_data(y_norm, "y")
+        self.assertEqual(x.shape, (2655, 9))
+        self.assertEqual(y.shape, (2655, 6))
+        self.assertGreater(x.min().min(), -22)
+        self.assertLess(x.max().max(), 70)
+        self.assertGreater(y.min().min(), -14)
+        self.assertLess(y.max().max(), 5)
 
 if __name__ == '__main__':
     unittest.main()

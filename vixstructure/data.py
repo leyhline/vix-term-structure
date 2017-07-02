@@ -115,23 +115,37 @@ class TermStructure(Data):
         return pd.Series(longs, term[1:-1].index)
 
 
-def normalize_data(data: pd.DataFrame) -> pd.DataFrame:
-    mean = data.mean()
-    ptp = data.max() - data.min()
-    return (data - mean) / ptp
+class LongPricesDataset:
+    def __init__(self, term_structure_path, expirations_path):
+        self.expirations = Expirations(expirations_path)
+        self.term_structure = TermStructure(term_structure_path, self.expirations)
+        self.mean = dict()
+        self.ptp = dict()
 
+    def normalize_data(self, data: pd.DataFrame, idx) -> pd.DataFrame:
+        """
+        All values should be normalized to range(-1,1).
+        :param data: The data to normalize.
+        :param idx: An id for remembering normalization values in class.
+        :return: Normalized DataFrame.
+        """
+        self.mean[idx] = data.mean()
+        self.ptp[idx] = data.max() - data.min()
+        return (data - self.mean[idx]) / self.ptp[idx]
 
-def long_prices_dataset(term_structure_path, expirations_path,
-                        normalize=False) -> Tuple[np.ndarray, np.ndarray]:
-    expi = Expirations(expirations_path)
-    ts = TermStructure(term_structure_path, expi)
-    x = ts.diff.join(expi.days_to_expiration)
-    y = ts.long_prices
-    if normalize:
-        x = normalize_data(x)
-        y = normalize_data(y)
-    assert x.index.identical(y.index)
-    return x.iloc[:-1].fillna(0).values, y.iloc[1:].fillna(0).values
+    def denormalize_data(self, data: np.ndarray, idx) -> np.ndarray:
+        return data * self.ptp[idx].values + self.mean[idx].values
+
+    def dataset(self, with_expirations=True, normalize=False) -> Tuple[np.ndarray, np.ndarray]:
+        x = self.term_structure.diff
+        y = self.term_structure.long_prices
+        if with_expirations:
+            x = x.join(self.expirations.days_to_expiration)
+        if normalize:
+            x = self.normalize_data(x, "x")
+            y = self.normalize_data(y, "y")
+        assert x.index.identical(y.index)
+        return x.iloc[:-1].fillna(0).values, y.iloc[1:].fillna(0).values
 
 
 ################################################################
