@@ -9,8 +9,8 @@ class TestUtils(unittest.TestCase):
         result2 = parse_model_repr("20170703100621_tfpool17_depth9_width21_dropout0e+00_optimAdam_lr1e-03_normalized")
         self.assertEqual(len(result1), 8)
         self.assertEqual(len(result2), 8)
-        self.assertEqual(result1["normalized"], False)
-        self.assertEqual(result2["normalized"], True)
+        self.assertEqual(result1.normalized, False)
+        self.assertEqual(result2.normalized, True)
 
 
 if __name__ == '__main__':

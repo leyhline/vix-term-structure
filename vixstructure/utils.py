@@ -7,6 +7,11 @@ Some helper functions for evaluating the data.
 """
 
 import datetime
+from collections import namedtuple
+
+
+ModelParameters = namedtuple("ModelParameters", ("datetime", "hostname", "depth", "width",
+                                                 "dropout", "optimizer", "lr", "normalized"))
 
 
 def parse_model_repr(repr_str: str):
@@ -25,5 +30,5 @@ def parse_model_repr(repr_str: str):
     repr_dict["optimizer"] = repr_list[5].lstrip("optim")
     repr_dict["lr"] = float(repr_list[6].lstrip("lr"))
     repr_dict["normalized"] = True if len(repr_list) >= 8 and repr_list[7] == "normalized" else False
-    return repr_dict
+    return ModelParameters(**repr_dict)
 
