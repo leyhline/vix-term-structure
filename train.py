@@ -32,12 +32,10 @@ def train(args):
     if args.normalize:
         metrics.append(dataset.denorm_mse)
     model.compile(optimizer, "mean_squared_error", metrics=metrics)
-    model.fit(x_train, y_train, args.batch_size, args.epochs, verbose=0 if args.quiet else 2,
-              validation_data=(x_val, y_val))
+    callbacks = []
     if args.save:
-        try:
-            now = datetime.datetime.now()
-            name = "{}_{}_depth{}_width{}_dropout{:.0e}_optim{}_lr{:.0e}{}".format(
+        now = datetime.datetime.now()
+        name = "{}_{}_depth{}_width{}_dropout{:.0e}_optim{}_lr{:.0e}{}".format(
                 now.strftime("%Y%m%d%H%M%S"),
                 socket.gethostname(),
                 args.network_depth,
@@ -46,6 +44,11 @@ def train(args):
                 args.optimizer,
                 args.learning_rate,
                 "_normalized" if args.normalize else "")
+        callbacks.append(keras.callbacks.CSVLogger(os.path.join(args.save, name + ".csv")))
+    model.fit(x_train, y_train, args.batch_size, args.epochs, verbose=0 if args.quiet else 2,
+              validation_data=(x_val, y_val), callbacks=callbacks)
+    if args.save:
+        try:
             model.save(os.path.join(args.save, name + ".h5"))
         except FileNotFoundError as e:
             print("Could not save the model.", str(e), file=sys.stderr)
@@ -54,3 +57,4 @@ def train(args):
 if __name__ == "__main__":
     args = parser.parse_args()
     train(args)
+
