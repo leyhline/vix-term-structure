@@ -3,6 +3,7 @@ import sys
 import os
 import datetime
 import socket
+from math import sqrt
 
 import tensorflow.contrib.keras as keras
 
@@ -21,6 +22,8 @@ parser.add_argument("-e", "--epochs", type=int, default=100)
 parser.add_argument("-n", "--normalize", action="store_true")
 parser.add_argument("-q", "--quiet", action="store_true")
 parser.add_argument("-s", "--save", type=str, help="Optional: Specify save path for trained model.")
+parser.add_argument("--reduce_lr", action="store_true", help="If validation loss stagnates, reduce lr by sqrt(0.1).")
+parser.add_argument("--shuffle_off", action="store_false", help="Don't shuffle training data.")
 
 
 def train(args):
@@ -45,11 +48,13 @@ def train(args):
                 args.learning_rate,
                 "_normalized" if args.normalize else "")
         callbacks.append(keras.callbacks.CSVLogger(os.path.join(args.save, name + ".csv")))
+    if args.reduce_lr:
+        callbacks.append(keras.callbacks.ReduceLROnPlateau(factor=sqrt(0.1), patience=100, verbose=1))
     model.fit(x_train, y_train, args.batch_size, args.epochs, verbose=0 if args.quiet else 2,
-              validation_data=(x_val, y_val), callbacks=callbacks)
+              validation_data=(x_val, y_val), callbacks=callbacks, shuffle=args.shuffle_off)
     if args.save:
         try:
-            model.save(os.path.join(args.save, name + ".h5"))
+            model.save_weights(os.path.join(args.save, name + ".h5"))
         except FileNotFoundError as e:
             print("Could not save the model.", str(e), file=sys.stderr)
 
