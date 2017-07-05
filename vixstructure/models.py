@@ -12,8 +12,30 @@ from typing import Optional
 import tensorflow.contrib.keras as keras
 
 
+def selu(x):
+    """Scaled Exponential Linear Unit. (Klambauer et al., 2017)
+    # Arguments
+        x: A tensor or variable to compute the activation function for.
+    # References
+        - [Self-Normalizing Neural Networks](https://arxiv.org/abs/1706.02515)
+        - Taken from keras.activations (selu got included on Jun 14 2017)
+    """
+    alpha = 1.6732632423543772848170429916717
+    scale = 1.0507009873554804934193349852946
+    return scale * keras.backend.elu(x, alpha)
+
+
 def term_structure_to_spread_price(hidden_layers, hidden_layer_width, dropout=None,
                                    input_data_length=9, output_data_length=6):
+    """
+    Simple feed-forward network for mapping some input data to some output data.
+    :param hidden_layers: Defines depth of network.
+    :param hidden_layer_width: Defines width of hidden layers.
+    :param dropout: If you want to use dropout 0.5 is a nice value.
+    :param input_data_length: How many values does one sample hold?
+    :param output_data_length: How many values does one target sample hold?
+    :return: A keras model defining the network.
+    """
     activation = keras.activations.relu
     input = keras.layers.Input(shape=(input_data_length,), name="input")
     layer = input
