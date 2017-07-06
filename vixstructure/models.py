@@ -48,6 +48,34 @@ def term_structure_to_spread_price(hidden_layers, hidden_layer_width, dropout=No
     return model
 
 
+def mask_output(x):
+    x = keras.backend.cast(keras.backend.greater(x[:, -1], 0.0), "int32")
+    ones = keras.backend.ones_like(keras.backend.one_hot(x, 5), dtype="int32")
+    x = keras.backend.concatenate([keras.backend.expand_dims(x, axis=1), ones])
+    return keras.backend.cast(x, "float32")
+
+
+def term_structure_to_spread_price_v2(hidden_layers, hidden_layer_width, dropout=None,
+                                      input_data_length=9, output_data_length=6):
+    """
+    The same as above but prediction is always zero for first spread price when
+    time until expiration is 0. Time until expiration is always the last dimension
+    of input vector.
+    """
+    activation = keras.activations.relu
+    input = keras.layers.Input(shape=(input_data_length,), name="input")
+    layer = input
+    for _ in range(hidden_layers):
+        layer = keras.layers.Dense(hidden_layer_width, activation=activation)(layer)
+        if dropout:
+            layer = keras.layers.Dropout(rate=dropout)(layer)
+    output = keras.layers.Dense(output_data_length, name="output")(layer)
+    mask = keras.layers.Lambda(mask_output)(input)
+    output = keras.layers.Multiply()([mask, output])
+    model = keras.models.Model(inputs=input, outputs=output)
+    return model
+
+
 ################################################################
 # This is some old stuff. Try the functions above.
 ################################################################
