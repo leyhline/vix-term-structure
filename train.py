@@ -10,7 +10,6 @@ import tensorflow.contrib.keras as keras
 import vixstructure.data as data
 import vixstructure.models as models
 
-
 parser = argparse.ArgumentParser(description="Train a fully-connected neural network.")
 parser.add_argument("network_depth", type=int)
 parser.add_argument("network_width", type=int)
@@ -39,14 +38,14 @@ def train(args):
     if args.save:
         now = datetime.datetime.now()
         name = "{}_{}_depth{}_width{}_dropout{:.0e}_optim{}_lr{:.0e}{}".format(
-                now.strftime("%Y%m%d%H%M%S"),
-                socket.gethostname(),
-                args.network_depth,
-                args.network_width,
-                0 if not args.dropout else args.dropout,
-                args.optimizer,
-                args.learning_rate,
-                "_normalized" if args.normalize else "")
+            now.strftime("%Y%m%d%H%M%S"),
+            socket.gethostname(),
+            args.network_depth,
+            args.network_width,
+            0 if not args.dropout else args.dropout,
+            args.optimizer,
+            args.learning_rate,
+            "_normalized" if args.normalize else "")
         callbacks.append(keras.callbacks.CSVLogger(os.path.join(args.save, name + ".csv")))
     if args.reduce_lr:
         callbacks.append(keras.callbacks.ReduceLROnPlateau(factor=sqrt(0.1), patience=100, verbose=1))
@@ -62,4 +61,3 @@ def train(args):
 if __name__ == "__main__":
     args = parser.parse_args()
     train(args)
-
