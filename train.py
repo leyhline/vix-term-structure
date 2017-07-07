@@ -21,12 +21,18 @@ parser.add_argument("-e", "--epochs", type=int, default=100)
 parser.add_argument("-n", "--normalize", action="store_true")
 parser.add_argument("-q", "--quiet", action="store_true")
 parser.add_argument("-s", "--save", type=str, help="Optional: Specify save path for trained model.")
+parser.add_argument("-m", "--model", choices=["term_structure_to_spread_price",
+                                              "term_structure_to_spread_price_v2"],
+                    default="term_structure_to_spread_price",
+                    help="See models defined in vixstructure.models.")
+parser.add_argument("-a", "--activation", default="relu", help="Activation function for hidden layers.")
 parser.add_argument("--reduce_lr", action="store_true", help="If validation loss stagnates, reduce lr by sqrt(0.1).")
 parser.add_argument("--shuffle_off", action="store_false", help="Don't shuffle training data.")
 
 
 def train(args):
-    model = models.term_structure_to_spread_price(args.network_depth, args.network_width, args.dropout)
+    model = getattr(models, args.model)(args.network_depth, args.network_width, args.dropout,
+                                        activation_function=args.activation)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
     dataset = data.LongPricesDataset("data/8_m_settle.csv", "data/expirations.csv")
     (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(normalize=args.normalize)

@@ -26,7 +26,8 @@ def selu(x):
 
 
 def term_structure_to_spread_price(hidden_layers, hidden_layer_width, dropout=None,
-                                   input_data_length=9, output_data_length=6):
+                                   input_data_length=9, output_data_length=6,
+                                   activation_function="relu"):
     """
     Simple feed-forward network for mapping some input data to some output data.
     :param hidden_layers: Defines depth of network.
@@ -34,9 +35,13 @@ def term_structure_to_spread_price(hidden_layers, hidden_layer_width, dropout=No
     :param dropout: If you want to use dropout 0.5 is a nice value.
     :param input_data_length: How many values does one sample hold?
     :param output_data_length: How many values does one target sample hold?
+    :param activation_function: Activation function for hidden layers; see keras.activations
     :return: A keras model defining the network.
     """
-    activation = keras.activations.relu
+    if activation_function == "selu":
+        activation = selu
+    else:
+        activation = getattr(keras.activations, activation_function)
     input = keras.layers.Input(shape=(input_data_length,), name="input")
     layer = input
     for _ in range(hidden_layers):
@@ -56,13 +61,17 @@ def mask_output(x):
 
 
 def term_structure_to_spread_price_v2(hidden_layers, hidden_layer_width, dropout=None,
-                                      input_data_length=9, output_data_length=6):
+                                      input_data_length=9, output_data_length=6,
+                                      activation_function="relu"):
     """
     The same as above but prediction is always zero for first spread price when
     time until expiration is 0. Time until expiration is always the last dimension
     of input vector.
     """
-    activation = keras.activations.relu
+    if activation_function == "selu":
+        activation = selu
+    else:
+        activation = getattr(keras.activations, activation_function)
     input = keras.layers.Input(shape=(input_data_length,), name="input")
     layer = input
     for _ in range(hidden_layers):
