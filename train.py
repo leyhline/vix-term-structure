@@ -25,7 +25,8 @@ parser.add_argument("-m", "--model", choices=["term_structure_to_spread_price",
                                               "term_structure_to_spread_price_v2"],
                     default="term_structure_to_spread_price",
                     help="See models defined in vixstructure.models.")
-parser.add_argument("-a", "--activation", default="relu", help="Activation function for hidden layers.")
+parser.add_argument("-a", "--activation", default="relu", help="Activation function for hidden layers.",
+                    choices=["relu", "selu"])
 parser.add_argument("--reduce_lr", action="store_true", help="If validation loss stagnates, reduce lr by sqrt(0.1).")
 parser.add_argument("--shuffle_off", action="store_false", help="Don't shuffle training data.")
 
