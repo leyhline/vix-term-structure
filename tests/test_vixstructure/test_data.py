@@ -118,6 +118,13 @@ class TestLongPricesDatasets(unittest.TestCase):
         y_full = np.concatenate([y_train_fst, y_val_fst, y_test_fst, y_train_snd, y_val_snd, y_test_snd], axis=0)
         self.assertTrue((y==y_full).all())
 
+    def test_if_month_and_day_gets_included(self):
+        (x_train, y_train), (x_val, y_val), (x_test, y_test) = self.dataset.splitted_dataset(with_months=True,
+                                                                                             with_days=True)
+        print(x_train.shape)
+        for data in (x_train, x_val, x_test):
+            self.assertEqual(data.shape[1], 11)
+
 
 if __name__ == '__main__':
     unittest.main()

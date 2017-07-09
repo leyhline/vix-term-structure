@@ -148,9 +148,14 @@ class LongPricesDataset:
         return keras.backend.mean(keras.backend.square(
             self.denormalize_data(y_pred, "y") - self.denormalize_data(y_true, "y")), axis=-1)
 
-    def dataset(self, with_expirations=True, normalize=False) -> Tuple[np.ndarray, np.ndarray]:
+    def dataset(self, with_expirations=True, normalize=False,
+                with_months=False, with_days=False) -> Tuple[np.ndarray, np.ndarray]:
         x = self.term_structure.diff
         y = self.term_structure.long_prices
+        if with_months:
+            x["month"] = x.index.month
+        if with_days:
+            x["day"] = x.index.day
         if with_expirations:
             x = x.join(self.expirations.days_to_expiration)
         if normalize:
@@ -160,7 +165,8 @@ class LongPricesDataset:
         return x.iloc[:-1].fillna(0).values, y.iloc[1:].fillna(0).values
 
     def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15,
-                         with_expirations=True, normalize=False) -> Tuple[Tuple[np.ndarray, np.ndarray],
+                         with_expirations=True, normalize=False,
+                         with_months=False, with_days=False) -> Tuple[Tuple[np.ndarray, np.ndarray],
                                                                           Tuple[np.ndarray, np.ndarray],
                                                                           Tuple[np.ndarray, np.ndarray]]:
         """
@@ -173,7 +179,8 @@ class LongPricesDataset:
         :param normalize: Passed to dataset method.
         :return: Three (x,y)-tuples for the three above mentioned dataset splits.
         """
-        x, y = self.dataset(with_expirations=with_expirations, normalize=normalize)
+        x, y = self.dataset(with_expirations=with_expirations, normalize=normalize,
+                            with_months=with_months, with_days=with_days)
         assert len(x) == len(y)
         val_length = int(len(x) * validation_split / 2)
         test_length = int(len(x) * test_split / 2)
