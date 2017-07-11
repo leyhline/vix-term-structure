@@ -22,7 +22,7 @@ from lazy import lazy
 # See analysis.ipynb
 # Before this date there are too many NaN values.
 FIRST_DATE = "2006-10-23"
-LAST_DATE = None
+LAST_DATE = "2017-05-11"
 KWARGS = dict(usecols=range(1,10), dtype=np.float32, parse_dates=[0], header=0, index_col=0, na_values=0)
 
 
@@ -56,6 +56,16 @@ class Data:
     @lazy
     def data_frame(self) -> pd.DataFrame:
         return pd.read_csv(self.filename, **self.kwargs).loc[self.first_index:self.last_index]
+
+
+class VIX(Data):
+    def __init__(self, path):
+        super(VIX, self).__init__(path, use_standard_kwargs=False, parse_dates=[0],
+                                  header=0, index_col=0, na_values="null", dtype=np.float32)
+
+    @lazy
+    def adjClose(self):
+        return self.data_frame["Adj Close"]
 
 
 class Expirations(Data):
@@ -192,6 +202,44 @@ class LongPricesDataset:
                             np.append(y_fst[:-(val_length+test_length)], y_snd[:-(val_length+test_length)], axis=0))
         x_val, y_val = (np.append(x_fst[-(val_length+test_length):-test_length], x_snd[-(val_length+test_length):-test_length], axis=0),
                         np.append(y_fst[-(val_length+test_length):-test_length], y_snd[-(val_length+test_length):-test_length], axis=0))
+        x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
+                          np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
+        return (x_train, y_train), (x_val, y_val), (x_test, y_test)
+
+
+class VIXLongPrice:
+    def __init__(self, term_structure_path, expirations_path, vix_path):
+        self.expirations = Expirations(expirations_path)
+        self.term_structure = TermStructure(term_structure_path, self.expirations)
+        self.vix = VIX(vix_path)
+
+    def dataset(self, with_expirations=True, with_vix=False):
+        x = self.term_structure.long_prices[:-1]
+        y = self.term_structure.long_prices[1:]
+        if with_vix:
+            x = x.join(self.vix.adjClose)
+        if with_expirations:
+            x = x.join(self.expirations.days_to_expiration)
+        return x.fillna(0).values, y.fillna(0).values
+
+    def splitted_dataset(self, validation_split: float = 0.15, test_split: float = 0.15,
+                         with_expirations=True, with_vix=False) -> Tuple[Tuple[np.ndarray, np.ndarray],
+                                                                         Tuple[np.ndarray, np.ndarray],
+                                                                         Tuple[np.ndarray, np.ndarray]]:
+        x, y = self.dataset(with_expirations=with_expirations, with_vix=with_vix)
+        assert len(x) == len(y)
+        val_length = int(len(x) * validation_split / 2)
+        test_length = int(len(x) * test_split / 2)
+        x_fst = x[:int(len(x) / 2)]
+        x_snd = x[int(len(x) / 2):]
+        y_fst = y[:int(len(y) / 2)]
+        y_snd = y[int(len(y) / 2):]
+        x_train, y_train = (np.append(x_fst[:-(val_length + test_length)], x_snd[:-(val_length + test_length)], axis=0),
+                            np.append(y_fst[:-(val_length + test_length)], y_snd[:-(val_length + test_length)], axis=0))
+        x_val, y_val = (np.append(x_fst[-(val_length + test_length):-test_length], x_snd[-(val_length + test_length):-test_length],
+                                  axis=0),
+                        np.append(y_fst[-(val_length + test_length):-test_length], y_snd[-(val_length + test_length):-test_length],
+                                  axis=0))
         x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
                           np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
         return (x_train, y_train), (x_val, y_val), (x_test, y_test)
