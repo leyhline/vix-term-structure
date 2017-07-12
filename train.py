@@ -27,6 +27,8 @@ parser.add_argument("-m", "--model", choices=["term_structure_to_spread_price",
                     help="See models defined in vixstructure.models.")
 parser.add_argument("-a", "--activation", default="relu", help="Activation function for hidden layers.",
                     choices=["relu", "selu"])
+parser.add_argument("--data", choices=["LongPricesDataset", "VIXLongPrice"], default="LongPricesDataset",
+                    help="Which data to use for training and validation.")
 parser.add_argument("--reduce_lr", action="store_true", help="If validation loss stagnates, reduce lr by sqrt(0.1).")
 parser.add_argument("--shuffle_off", action="store_false", help="Don't shuffle training data.")
 parser.add_argument("--include_months", action="store_true")
@@ -34,16 +36,23 @@ parser.add_argument("--include_days", action="store_true")
 
 
 def train(args):
-    input_length = 9
-    input_length += int(args.include_months)
-    input_length += int(args.include_days)
+    if args.data == "LongPricesDataset":
+        input_length = 9
+        input_length += int(args.include_months)
+        input_length += int(args.include_days)
+    else:
+        input_length = 8
     model = getattr(models, args.model)(args.network_depth, args.network_width, args.dropout,
                                         activation_function=args.activation, input_data_length=input_length)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
-    dataset = data.LongPricesDataset("data/8_m_settle.csv", "data/expirations.csv")
-    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(normalize=args.normalize,
-                                                                     with_months=args.include_months,
-                                                                     with_days=args.include_days)
+    if args.data == "LongPricesDataset":
+        dataset = getattr(data, args.data)("data/8_m_settle.csv", "data/expirations.csv")
+        (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(normalize=args.normalize,
+                                                                         with_months=args.include_months,
+                                                                         with_days=args.include_days)
+    else:
+        dataset = getattr(data, args.data)("data/8_m_settle.csv", "data/expirations.csv", "data/vix.csv")
+        (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(with_expirations=True, with_vix=True)
     metrics = []
     if args.normalize:
         metrics.append(dataset.denorm_mse)
