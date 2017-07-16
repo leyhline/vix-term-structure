@@ -29,6 +29,7 @@ parser.add_argument("-a", "--activation", default="relu", help="Activation funct
                     choices=["relu", "selu"])
 parser.add_argument("--data", choices=["LongPricesDataset", "VIXLongPrice"], default="LongPricesDataset",
                     help="Which data to use for training and validation.")
+parser.add_argument("--days", type=int, default=1, help="How many days to predict into the future.")
 parser.add_argument("--reduce_lr", action="store_true", help="If validation loss stagnates, reduce lr by sqrt(0.1).")
 parser.add_argument("--shuffle_off", action="store_false", help="Don't shuffle training data.")
 parser.add_argument("--include_months", action="store_true")
@@ -49,7 +50,8 @@ def train(args):
         dataset = getattr(data, args.data)("data/8_m_settle.csv", "data/expirations.csv")
         (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(normalize=args.normalize,
                                                                          with_months=args.include_months,
-                                                                         with_days=args.include_days)
+                                                                         with_days=args.include_days,
+                                                                         days_to_future=args.days)
     else:
         dataset = getattr(data, args.data)("data/8_m_settle.csv", "data/expirations.csv", "data/vix.csv")
         (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(with_expirations=True, with_vix=True)

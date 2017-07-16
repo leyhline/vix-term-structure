@@ -124,6 +124,28 @@ class TestLongPricesDatasets(unittest.TestCase):
         for data in (x_train, x_val, x_test):
             self.assertEqual(data.shape[1], 11)
 
+    def test_five_days_prediction(self):
+        (x_train, y_train), (x_val, y_val), (x_test, y_test) = self.dataset.splitted_dataset(days_to_future=5)
+        x_train_fst = x_train[:int(len(x_train) / 2)]
+        x_train_snd = x_train[int(len(x_train) / 2):]
+        x_val_fst = x_val[:int(len(x_val) / 2)]
+        x_val_snd = x_val[int(len(x_val) / 2):]
+        x_test_fst = x_test[:int(len(x_test) / 2)]
+        x_test_snd = x_test[int(len(x_test) / 2):]
+        x_full = np.concatenate([x_train_fst, x_val_fst, x_test_fst, x_train_snd, x_val_snd, x_test_snd], axis=0)
+        x, y = self.dataset.dataset(days_to_future=5)
+        self.assertEqual(x.shape, (2651, 9))
+        self.assertEqual(y.shape, (2651, 6))
+        self.assertTrue((x == x_full).all())
+        y_train_fst = y_train[:int(len(y_train) / 2)]
+        y_train_snd = y_train[int(len(y_train) / 2):]
+        y_val_fst = y_val[:int(len(y_val) / 2)]
+        y_val_snd = y_val[int(len(y_val) / 2):]
+        y_test_fst = y_test[:int(len(y_test) / 2)]
+        y_test_snd = y_test[int(len(y_test) / 2):]
+        y_full = np.concatenate([y_train_fst, y_val_fst, y_test_fst, y_train_snd, y_val_snd, y_test_snd], axis=0)
+        self.assertTrue((y == y_full).all())
+
 
 class TestVIX(unittest.TestCase):
     def setUp(self):

@@ -159,7 +159,8 @@ class LongPricesDataset:
             self.denormalize_data(y_pred, "y") - self.denormalize_data(y_true, "y")), axis=-1)
 
     def dataset(self, with_expirations=True, normalize=False,
-                with_months=False, with_days=False) -> Tuple[np.ndarray, np.ndarray]:
+                with_months=False, with_days=False,
+                days_to_future=1) -> Tuple[np.ndarray, np.ndarray]:
         x = self.term_structure.diff
         y = self.term_structure.long_prices
         if with_months:
@@ -172,13 +173,14 @@ class LongPricesDataset:
             x = self.normalize_data(x, "x")
             y = self.normalize_data(y, "y")
         assert x.index.identical(y.index)
-        return x.iloc[:-1].fillna(0).values, y.iloc[1:].fillna(0).values
+        return x.iloc[:-days_to_future].fillna(0).values, y.iloc[days_to_future:].fillna(0).values
 
     def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15,
                          with_expirations=True, normalize=False,
-                         with_months=False, with_days=False) -> Tuple[Tuple[np.ndarray, np.ndarray],
-                                                                          Tuple[np.ndarray, np.ndarray],
-                                                                          Tuple[np.ndarray, np.ndarray]]:
+                         with_months=False, with_days=False,
+                         days_to_future=1) -> Tuple[Tuple[np.ndarray, np.ndarray],
+                                                    Tuple[np.ndarray, np.ndarray],
+                                                    Tuple[np.ndarray, np.ndarray]]:
         """
         Split whole dataset into three parts: training set, cross validation set, test set.
         For the splits there are values used from the middle and from the end of the data to
@@ -190,7 +192,7 @@ class LongPricesDataset:
         :return: Three (x,y)-tuples for the three above mentioned dataset splits.
         """
         x, y = self.dataset(with_expirations=with_expirations, normalize=normalize,
-                            with_months=with_months, with_days=with_days)
+                            with_months=with_months, with_days=with_days, days_to_future=days_to_future)
         assert len(x) == len(y)
         val_length = int(len(x) * validation_split / 2)
         test_length = int(len(x) * test_split / 2)
@@ -208,6 +210,10 @@ class LongPricesDataset:
 
 
 class VIXLongPrice:
+    """
+    Mapping long price to long price.
+    This doesn't work very good.
+    """
     def __init__(self, term_structure_path, expirations_path, vix_path):
         self.expirations = Expirations(expirations_path)
         self.term_structure = TermStructure(term_structure_path, self.expirations)
