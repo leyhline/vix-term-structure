@@ -62,11 +62,12 @@ def train(args):
     callbacks = []
     if args.save:
         now = datetime.datetime.now()
-        name = "{}_{}_depth{}_width{}_dropout{:.0e}_optim{}_lr{:.0e}{}".format(
+        name = "{}_{}_depth{}_width{}_days{}_dropout{:.0e}_optim{}_lr{:.0e}{}".format(
             now.strftime("%Y%m%d%H%M%S"),
             socket.gethostname(),
             args.network_depth,
             args.network_width,
+            args.days,
             0 if not args.dropout else args.dropout,
             args.optimizer,
             args.learning_rate,
