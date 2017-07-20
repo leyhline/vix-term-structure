@@ -4,7 +4,7 @@ import datetime
 import numpy as np
 
 from vixstructure.data import Data, TermStructure, Expirations, VIX
-from vixstructure.data import LongPricesDataset, VIXLongPrice
+from vixstructure.data import LongPricesDataset, VIXLongPrice, MinutelyData
 
 
 class TestData(unittest.TestCase):
@@ -190,6 +190,35 @@ class TestVIXLongPrice(unittest.TestCase):
         y_full = np.concatenate([y_train_fst, y_val_fst, y_test_fst, y_train_snd, y_val_snd, y_test_snd], axis=0)
         self.assertTrue((y==y_full).all())
 
+
+class TestMinutelyData(unittest.TestCase):
+    def setUp(self):
+        self.dataset = MinutelyData("../../data/VIX Futures min.csv")
+
+    def test_basic_dataset(self):
+        x, y = self.dataset.dataset()
+        self.assertEqual(x.shape, (844886, 9))
+        self.assertEqual(y.shape, (844886, 8))
+
+    def test_dataset_split_into_train_test_and_validation_data(self):
+        (x_train, y_train), (x_val, y_val), (x_test, y_test) = self.dataset.splitted_dataset()
+        x_train_fst = x_train[:int(len(x_train) / 2)]
+        x_train_snd = x_train[int(len(x_train) / 2):]
+        x_val_fst = x_val[:int(len(x_val) / 2)]
+        x_val_snd = x_val[int(len(x_val) / 2):]
+        x_test_fst = x_test[:int(len(x_test) / 2)]
+        x_test_snd = x_test[int(len(x_test) / 2):]
+        x_full = np.concatenate([x_train_fst, x_val_fst, x_test_fst, x_train_snd, x_val_snd, x_test_snd], axis=0)
+        x, y = self.dataset.dataset()
+        self.assertTrue((x==x_full).all())
+        y_train_fst = y_train[:int(len(y_train) / 2)]
+        y_train_snd = y_train[int(len(y_train) / 2):]
+        y_val_fst = y_val[:int(len(y_val) / 2)]
+        y_val_snd = y_val[int(len(y_val) / 2):]
+        y_test_fst = y_test[:int(len(y_test) / 2)]
+        y_test_snd = y_test[int(len(y_test) / 2):]
+        y_full = np.concatenate([y_train_fst, y_val_fst, y_test_fst, y_train_snd, y_val_snd, y_test_snd], axis=0)
+        self.assertTrue((y==y_full).all())
 
 if __name__ == '__main__':
     unittest.main()

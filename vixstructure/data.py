@@ -12,6 +12,7 @@ import random
 import logging
 import operator
 from typing import Tuple, Iterator, Union
+import datetime
 
 import pandas as pd
 import numpy as np
@@ -263,9 +264,32 @@ class MinutelyData:
                                           index_col=0, dtype=dtypes_dict, parse_dates=[0])
         self.term_structure = self.term_structure.loc[first_index:last_index]
 
-    @lazy
-    def dataset(self):
-        pass
+    def dataset(self, days_to_future=1):
+        # Use only rows where you have data for the next term to predict
+        cond = (self.term_structure.index + datetime.timedelta(days=days_to_future)).isin(self.term_structure.index)
+        useful_indices = self.term_structure.index.where(cond).dropna()
+        this_term = self.term_structure.loc[useful_indices, "M1":"M8"]
+        next_term = self.term_structure.loc[useful_indices + datetime.timedelta(days=1), "M1":"M8"]
+        this_term = this_term.join(self.term_structure["DaysToExp"])
+        return this_term.fillna(0).values, next_term.fillna(0).values
+
+    def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15,
+                         days_to_future=1):
+        x, y = self.dataset(days_to_future=days_to_future)
+        assert len(x) == len(y)
+        val_length = int(len(x) * validation_split / 2)
+        test_length = int(len(x) * test_split / 2)
+        x_fst = x[:int(len(x) / 2)]
+        x_snd = x[int(len(x) / 2):]
+        y_fst = y[:int(len(y) / 2)]
+        y_snd = y[int(len(y) / 2):]
+        x_train, y_train = (np.append(x_fst[:-(val_length+test_length)], x_snd[:-(val_length+test_length)], axis=0),
+                            np.append(y_fst[:-(val_length+test_length)], y_snd[:-(val_length+test_length)], axis=0))
+        x_val, y_val = (np.append(x_fst[-(val_length+test_length):-test_length], x_snd[-(val_length+test_length):-test_length], axis=0),
+                        np.append(y_fst[-(val_length+test_length):-test_length], y_snd[-(val_length+test_length):-test_length], axis=0))
+        x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
+                          np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
+        return (x_train, y_train), (x_val, y_val), (x_test, y_test)
 
 
 ################################################################
