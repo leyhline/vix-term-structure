@@ -173,7 +173,8 @@ class LongPricesDataset:
             x = self.normalize_data(x, "x")
             y = self.normalize_data(y, "y")
         assert x.index.identical(y.index)
-        return x.iloc[:-days_to_future].fillna(0).values, y.iloc[days_to_future:].fillna(0).values
+        return (x.iloc[:-days_to_future].interpolate(axis=1).fillna(0).values,
+                y.iloc[days_to_future:].interpolate(axis=1).fillna(0).values)
 
     def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15,
                          with_expirations=True, normalize=False,
