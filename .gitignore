@@ -1,7 +1,5 @@
 # PyCharm IDE
-.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/dictionaries
+.idea/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -109,3 +107,5 @@ logs/tensorboard
 *.png
 *.mp4
 MNIST_data/
+VIX Futures min.csv
+models/
