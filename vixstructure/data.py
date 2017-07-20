@@ -164,8 +164,6 @@ class LongPricesDataset:
                 days_to_future=1) -> Tuple[np.ndarray, np.ndarray]:
         x = self.term_structure.diff
         y = self.term_structure.long_prices
-        x.interpolate(axis=1, inplace=True)
-        y.interpolate(axis=1, inplace=True)
         if with_months:
             x["month"] = x.index.month
         if with_days:
