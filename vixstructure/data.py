@@ -163,6 +163,8 @@ class LongPricesDataset:
                 days_to_future=1) -> Tuple[np.ndarray, np.ndarray]:
         x = self.term_structure.diff
         y = self.term_structure.long_prices
+        x.interpolate(axis=1, inplace=True)
+        y.interpolate(axis=1, inplace=True)
         if with_months:
             x["month"] = x.index.month
         if with_days:
@@ -173,8 +175,8 @@ class LongPricesDataset:
             x = self.normalize_data(x, "x")
             y = self.normalize_data(y, "y")
         assert x.index.identical(y.index)
-        return (x.iloc[:-days_to_future].interpolate(axis=1).fillna(0).values,
-                y.iloc[days_to_future:].interpolate(axis=1).fillna(0).values)
+        return (x.iloc[:-days_to_future].fillna(0).values,
+                y.iloc[days_to_future:].fillna(0).values)
 
     def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15,
                          with_expirations=True, normalize=False,
@@ -250,6 +252,20 @@ class VIXLongPrice:
         x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
                           np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
         return (x_train, y_train), (x_val, y_val), (x_test, y_test)
+
+
+class MinutelyData:
+    """The same as LongPricesDataset but with minutely data."""
+    def __init__(self, term_structure_path, first_index=FIRST_DATE, last_index=LAST_DATE):
+        dtypes_dict = {"M" + str(key): np.float32 for key in range(1, 9)}
+        dtypes_dict["DaysToExp"] = np.int32
+        self.term_structure = pd.read_csv(term_structure_path, usecols=[0] + list(range(2,10)) + [11],
+                                          index_col=0, dtype=dtypes_dict, parse_dates=[0])
+        self.term_structure = self.term_structure.loc[first_index:last_index]
+
+    @lazy
+    def dataset(self):
+        pass
 
 
 ################################################################
