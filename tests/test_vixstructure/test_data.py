@@ -193,12 +193,12 @@ class TestVIXLongPrice(unittest.TestCase):
 
 class TestMinutelyData(unittest.TestCase):
     def setUp(self):
-        self.dataset = MinutelyData("../../data/VIX Futures min.csv")
+        self.dataset = MinutelyData("../../data/term_structure_minutely.h5")
 
     def test_basic_dataset(self):
         x, y = self.dataset.dataset()
-        self.assertEqual(x.shape, (844886, 9))
-        self.assertEqual(y.shape, (844886, 8))
+        self.assertEqual(x.shape, (851965, 9))
+        self.assertEqual(y.shape, (851965, 6))
 
     def test_dataset_split_into_train_test_and_validation_data(self):
         (x_train, y_train), (x_val, y_val), (x_test, y_test) = self.dataset.splitted_dataset()

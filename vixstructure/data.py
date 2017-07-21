@@ -254,26 +254,21 @@ class VIXLongPrice:
 
 
 class MinutelyData:
-    """The same as LongPricesDataset but with minutely data."""
-    def __init__(self, term_structure_path, first_index=FIRST_DATE, last_index=LAST_DATE):
-        dtypes_dict = {"M" + str(key): np.float32 for key in range(1, 9)}
-        dtypes_dict["DaysToExp"] = np.int32
-        self.term_structure = pd.read_csv(term_structure_path, usecols=[0] + list(range(2,10)) + [11],
-                                          index_col=0, dtype=dtypes_dict, parse_dates=[0])
-        self.term_structure = self.term_structure.loc[first_index:last_index]
+    """
+    The same as LongPricesDataset but with minutely data.
 
-    def dataset(self, days_to_future=1):
-        # Use only rows where you have data for the next term to predict
-        cond = (self.term_structure.index + datetime.timedelta(days=days_to_future)).isin(self.term_structure.index)
-        useful_indices = self.term_structure.index.where(cond).dropna()
-        this_term = self.term_structure.loc[useful_indices, "M1":"M8"]
-        next_term = self.term_structure.loc[useful_indices + datetime.timedelta(days=1), "M1":"M8"]
-        this_term = this_term.join(self.term_structure["DaysToExp"])
-        return this_term.fillna(0).values, next_term.fillna(0).values
+    This class is very specific because the constructor assumes that there
+    is one hdf5 file that contains all the data in a preprocessed way.
+    """
+    def __init__(self, hdf5_path):
+        self.x = pd.read_hdf(hdf5_path, "x")
+        self.y = pd.read_hdf(hdf5_path, "y")
 
-    def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15,
-                         days_to_future=1):
-        x, y = self.dataset(days_to_future=days_to_future)
+    def dataset(self):
+        return self.x.fillna(0).values, self.y.fillna(0).values
+
+    def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15):
+        x, y = self.dataset()
         assert len(x) == len(y)
         val_length = int(len(x) * validation_split / 2)
         test_length = int(len(x) * test_split / 2)

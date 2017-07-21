@@ -27,7 +27,8 @@ parser.add_argument("-m", "--model", choices=["term_structure_to_spread_price",
                     help="See models defined in vixstructure.models.")
 parser.add_argument("-a", "--activation", default="relu", help="Activation function for hidden layers.",
                     choices=["relu", "selu"])
-parser.add_argument("--data", choices=["LongPricesDataset", "VIXLongPrice"], default="LongPricesDataset",
+parser.add_argument("--data", choices=["LongPricesDataset", "VIXLongPrice", "MinutelyData"],
+                    default="LongPricesDataset",
                     help="Which data to use for training and validation.")
 parser.add_argument("--days", type=int, default=1, help="How many days to predict into the future.")
 parser.add_argument("--reduce_lr", action="store_true", help="If validation loss stagnates, reduce lr by sqrt(0.1).")
@@ -41,8 +42,10 @@ def train(args):
         input_length = 9
         input_length += int(args.include_months)
         input_length += int(args.include_days)
-    else:
+    elif args.data == "VIXLongPrice":
         input_length = 8
+    else:
+        input_length = 9
     model = getattr(models, args.model)(args.network_depth, args.network_width, args.dropout,
                                         activation_function=args.activation, input_data_length=input_length)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
@@ -52,6 +55,9 @@ def train(args):
                                                                          with_months=args.include_months,
                                                                          with_days=args.include_days,
                                                                          days_to_future=args.days)
+    elif args.data == "MinutelyData":
+        dataset = getattr(data, args.data)("data/term_structure_minutely.h5")
+        (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset()
     else:
         dataset = getattr(data, args.data)("data/8_m_settle.csv", "data/expirations.csv", "data/vix.csv")
         (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(with_expirations=True, with_vix=True)
