@@ -109,3 +109,4 @@ logs/tensorboard
 MNIST_data/
 VIX Futures min.csv
 models/
+*.pdf
