@@ -1,10 +1,12 @@
 import unittest
 import datetime
+from collections import Counter
 
 import numpy as np
+import pandas as pd
 
 from vixstructure.data import Data, TermStructure, Expirations, VIX
-from vixstructure.data import LongPricesDataset, VIXLongPrice, MinutelyData
+from vixstructure.data import LongPricesDataset, VIXLongPrice, MinutelyData, FutureswiseLongPrice
 
 
 class TestData(unittest.TestCase):
@@ -219,6 +221,33 @@ class TestMinutelyData(unittest.TestCase):
         y_test_snd = y_test[int(len(y_test) / 2):]
         y_full = np.concatenate([y_train_fst, y_val_fst, y_test_fst, y_train_snd, y_val_snd, y_test_snd], axis=0)
         self.assertTrue((y==y_full).all())
+
+
+class TestFutureswiseLongPrice(unittest.TestCase):
+    def setUp(self):
+        self.dataset = FutureswiseLongPrice("../../data/futureswise_mapping.h5")
+
+    def test_data_from_constructor(self):
+        c1 = Counter(self.dataset.y.index - self.dataset.x.index)
+        c2 = Counter({pd.Timedelta(days=1): 11882,
+                      pd.Timedelta(days=2): 139,
+                      pd.Timedelta(days=3): 2762,
+                      pd.Timedelta(days=4): 400,
+                      pd.Timedelta(days=5): 10})
+        self.assertTrue(c1 == c2)
+
+    def test_dataset(self):
+        x, y = self.dataset.dataset()
+        self.assertEqual(x.shape, (15193, 8))
+        self.assertEqual(y.shape, (15193,))
+
+    def test_splitted_dataset(self):
+        (x_train, y_train), (x_val, y_val), (x_test, y_test) = self.dataset.splitted_dataset()
+        x = np.concatenate([x_train, x_val, x_test], axis=0)
+        y = np.concatenate([y_train, y_val, y_test], axis=0)
+        self.assertEqual(x.shape, (15193, 8))
+        self.assertEqual(y.shape, (15193,))
+
 
 if __name__ == '__main__':
     unittest.main()
