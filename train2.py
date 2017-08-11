@@ -18,6 +18,7 @@ import vixstructure.models as models
 parser = argparse.ArgumentParser(description="Train a fully-connected neural network.")
 parser.add_argument("network_depth", type=int)
 parser.add_argument("network_width", type=int)
+parser.add_argument("month", type=int)
 parser.add_argument("-d", "--dropout", type=float, default=None)
 parser.add_argument("-op", "--optimizer", choices=["Adam", "SGD"], default="Adam")
 parser.add_argument("-lr", "--learning_rate", type=float, default=0.001)
@@ -36,17 +37,18 @@ def train(args):
     model = models.term_structure_to_single_spread_price(args.network_depth, args.network_width,
                                                          args.dropout, input_data_length, args.activation)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
-    dataset = data.FutureswiseLongPrice("data/futureswise_mapping.h5")
-    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset()
+    dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5")
+    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(args.month)
     model.compile(optimizer, "mean_squared_error")
     callbacks = []
     if args.save:
         now = datetime.datetime.now()
-        name = "{}_{}_depth{}_width{}_days{}_dropout{:.0e}_optim{}_lr{:.0e}{}".format(
+        name = "{}_{}_depth{}_width{}_month{}_dropout{:.0e}_optim{}_lr{:.0e}".format(
             now.strftime("%Y%m%d%H%M%S"),
             socket.gethostname(),
             args.network_depth,
             args.network_width,
+            args.month,
             0 if not args.dropout else args.dropout,
             args.optimizer,
             args.learning_rate)
