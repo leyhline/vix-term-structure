@@ -351,6 +351,43 @@ class FutureswiseLongPrice:
         return (x_train, y_train), (x_val, y_val), (x_test, y_test)
 
 
+class FuturesByMonth:
+    """
+    Another representation of long prices and the respective term structure.
+    With these data frames one can select futures by month (or by year but
+    that's rather silly).
+    """
+    def __init__(self, hdf5_path):
+        self.x = pd.read_hdf(hdf5_path, "x")
+        self.y = pd.read_hdf(hdf5_path, "y")
+
+    def dataset(self, month: int):
+        """
+        Select a mapping x-y pair for a specific month.
+        :param month: Integer value between 1 and 12.
+        :return: Tuple with input data and target data.
+        """
+        return (self.x.loc(axis=0)[:, month].fillna(0).values,
+                self.y.loc(axis=0)[:, month].fillna(0).values)
+
+    def splitted_dataset(self, month: int, validation_split: float=0.15, test_split: float=0.15):
+        x, y = self.dataset(month)
+        assert len(x) == len(y)
+        val_length = int(len(x) * validation_split / 2)
+        test_length = int(len(x) * test_split / 2)
+        x_fst = x[:int(len(x) / 2)]
+        x_snd = x[int(len(x) / 2):]
+        y_fst = y[:int(len(y) / 2)]
+        y_snd = y[int(len(y) / 2):]
+        x_train, y_train = (np.append(x_fst[:-(val_length + test_length)], x_snd[:-(val_length + test_length)], axis=0),
+                            np.append(y_fst[:-(val_length + test_length)], y_snd[:-(val_length + test_length)], axis=0))
+        x_val, y_val = (np.append(x_fst[-(val_length + test_length):-test_length], x_snd[-(val_length + test_length):-test_length], axis=0),
+                        np.append(y_fst[-(val_length + test_length):-test_length], y_snd[-(val_length + test_length):-test_length], axis=0))
+        x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
+                          np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
+        return (x_train, y_train), (x_val, y_val), (x_test, y_test)
+
+
 ################################################################
 # All this is old stuff. Better use classes for holding data.
 ################################################################

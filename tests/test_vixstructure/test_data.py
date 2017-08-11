@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 
 from vixstructure.data import Data, TermStructure, Expirations, VIX
-from vixstructure.data import LongPricesDataset, VIXLongPrice, MinutelyData, FutureswiseLongPrice
+from vixstructure.data import LongPricesDataset, VIXLongPrice, MinutelyData
+from vixstructure.data import FuturesByMonth, FutureswiseLongPrice
 
 
 class TestData(unittest.TestCase):
@@ -247,6 +248,48 @@ class TestFutureswiseLongPrice(unittest.TestCase):
         y = np.concatenate([y_train, y_val, y_test], axis=0)
         self.assertEqual(x.shape, (15193, 8))
         self.assertEqual(y.shape, (15193,))
+
+
+class TestFuturesByMonth(unittest.TestCase):
+    def setUp(self):
+        self.dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5")
+
+    def test_data_from_constructor(self):
+        c1 = Counter(self.dataset.y.index.levels[2] - self.dataset.x.index.levels[2])
+        c2 = Counter({pd.Timedelta(days=1): 2181,
+                      pd.Timedelta(days=2): 25,
+                      pd.Timedelta(days=3): 499,
+                      pd.Timedelta(days=4): 75,
+                      pd.Timedelta(days=5): 2})
+        self.assertTrue(c1 == c2)
+
+    def test_dataset(self):
+        for month in range(1, 13):
+            x, y = self.dataset.dataset(month)
+            self.assertEqual(len(x), len(y))
+            self.assertGreater(len(y), 1200)
+            self.assertLess(len(y), 1400)
+
+    def test_splitted_dataset(self):
+        for month in range(1, 13):
+            (x_train, y_train), (x_val, y_val), (x_test, y_test) = self.dataset.splitted_dataset(month)
+            x_train_fst = x_train[:int(len(x_train) / 2)]
+            x_train_snd = x_train[int(len(x_train) / 2):]
+            x_val_fst = x_val[:int(len(x_val) / 2)]
+            x_val_snd = x_val[int(len(x_val) / 2):]
+            x_test_fst = x_test[:int(len(x_test) / 2)]
+            x_test_snd = x_test[int(len(x_test) / 2):]
+            x_full = np.concatenate([x_train_fst, x_val_fst, x_test_fst, x_train_snd, x_val_snd, x_test_snd], axis=0)
+            x, y = self.dataset.dataset(month)
+            self.assertTrue((x == x_full).all())
+            y_train_fst = y_train[:int(len(y_train) / 2)]
+            y_train_snd = y_train[int(len(y_train) / 2):]
+            y_val_fst = y_val[:int(len(y_val) / 2)]
+            y_val_snd = y_val[int(len(y_val) / 2):]
+            y_test_fst = y_test[:int(len(y_test) / 2)]
+            y_test_snd = y_test[int(len(y_test) / 2):]
+            y_full = np.concatenate([y_train_fst, y_val_fst, y_test_fst, y_train_snd, y_val_snd, y_test_snd], axis=0)
+            self.assertTrue((y == y_full).all())
 
 
 if __name__ == '__main__':
