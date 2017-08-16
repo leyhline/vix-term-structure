@@ -33,12 +33,16 @@ parser.add_argument("--shuffle_off", action="store_false", help="Don't shuffle t
 
 
 def train(args):
+    # Check if month number is valid.
+    if args.month not in range(1, 13):
+        print("Month argument has to be an integer between 1 and 12.", file=sys.stderr)
+        sys.exit(1)
     input_data_length = 8
     model = models.term_structure_to_single_spread_price(args.network_depth, args.network_width,
                                                          args.dropout, input_data_length, args.activation)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
-    dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5")
-    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(args.month)
+    dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5", "data/vix.csv")
+    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(args.month, diff=True)
     model.compile(optimizer, "mean_squared_error")
     callbacks = []
     if args.save:

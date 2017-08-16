@@ -108,6 +108,10 @@ class VIX(Data):
     def adjClose(self):
         return self.data_frame["Adj Close"]
 
+    @lazy
+    def normalized(self):
+        return (self.adjClose - self.adjClose.mean()) / self.adjClose.std()
+
 
 class Expirations(Data):
     def __init__(self, path):
@@ -357,21 +361,29 @@ class FuturesByMonth:
     With these data frames one can select futures by month (or by year but
     that's rather silly).
     """
-    def __init__(self, hdf5_path):
+    def __init__(self, hdf5_path, vix_path):
         self.x = pd.read_hdf(hdf5_path, "x")
         self.y = pd.read_hdf(hdf5_path, "y")
+        self.vix = VIX(vix_path)
 
-    def dataset(self, month: int):
+    def dataset(self, month: int, diff=False):
         """
         Select a mapping x-y pair for a specific month.
         :param month: Integer value between 1 and 12.
         :return: Tuple with input data and target data.
         """
-        return (self.x.loc(axis=0)[:, month].fillna(0).values,
-                self.y.loc(axis=0)[:, month].fillna(0).values)
+        x = self.x.copy()
+        x = x.loc(axis=0)[:, month]
+        if diff:
+            x = x.diff(axis=1).iloc[:,1:]
+            x.index = x.index.droplevel([0,1])
+            x = x.join(self.vix.normalized)
+            x = x.iloc[:, range(-1, 7)]
+        return x.fillna(0).values, self.y.loc(axis=0)[:, month].fillna(0).values
 
-    def splitted_dataset(self, month: int, validation_split: float=0.15, test_split: float=0.15):
-        x, y = self.dataset(month)
+    def splitted_dataset(self, month: int, validation_split: float=0.15, test_split: float=0.15,
+                         diff=False):
+        x, y = self.dataset(month, diff=diff)
         assert len(x) == len(y)
         val_length = int(len(x) * validation_split / 2)
         test_length = int(len(x) * test_split / 2)
@@ -385,6 +397,9 @@ class FuturesByMonth:
                         np.append(y_fst[-(val_length + test_length):-test_length], y_snd[-(val_length + test_length):-test_length], axis=0))
         x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
                           np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
+        y_train = np.expand_dims(y_train, axis=1)
+        y_val = np.expand_dims(y_val, axis=1)
+        y_test = np.expand_dims(y_test, axis=1)
         return (x_train, y_train), (x_val, y_val), (x_test, y_test)
 
 
