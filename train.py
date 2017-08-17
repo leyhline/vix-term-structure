@@ -1,3 +1,7 @@
+"""
+CLI for training feedforward neural networks with prepared data.
+"""
+
 import argparse
 import sys
 import os

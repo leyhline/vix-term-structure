@@ -85,6 +85,26 @@ def term_structure_to_spread_price_v2(hidden_layers, hidden_layer_width, dropout
     return model
 
 
+def term_structure_to_single_spread_price(hidden_layers, hidden_layer_width, dropout=None,
+                                          input_data_length=8, activation_function="relu"):
+    """
+    Predict only a single spread price instead of the whole set like above.
+    """
+    if activation_function == "selu":
+        activation = selu
+    else:
+        activation = getattr(keras.activations, activation_function)
+    input = keras.layers.Input(shape=(input_data_length,), name="input")
+    layer = input
+    for _ in range(hidden_layers):
+        layer = keras.layers.Dense(hidden_layer_width, activation=activation)(layer)
+        if dropout:
+            layer = keras.layers.Dropout(rate=dropout)(layer)
+    output = keras.layers.Dense(1, name="output")(layer)
+    model = keras.models.Model(inputs=input, outputs=output)
+    return model
+
+
 ################################################################
 # This is some old stuff. Try the functions above.
 ################################################################

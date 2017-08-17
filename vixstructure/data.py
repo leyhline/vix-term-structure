@@ -11,8 +11,7 @@ import os
 import random
 import logging
 import operator
-from typing import Tuple, Iterator, Union
-import datetime
+from typing import Tuple, Iterator, Union, Sequence
 
 import pandas as pd
 import numpy as np
@@ -25,6 +24,47 @@ from lazy import lazy
 FIRST_DATE = "2006-10-23"
 LAST_DATE = "2017-05-11"
 KWARGS = dict(usecols=range(1,10), dtype=np.float32, parse_dates=[0], header=0, index_col=0, na_values=0)
+
+
+def split_indices(a: int, b: int, val_split=0.15, test_split=0.15):
+    """
+    Calculate the necessary indices for splitting a dataset into
+    training, validation and test set in a diversified manner.
+    :param a: First index.
+    :param b: Last index.
+    :param val_split: Float describing the fraction used for validation.
+    :param test_split: Float describing the fraction used for testing.
+    :return: A 7-tuple of integers with the following values:
+             a: First index for training data
+             val1: Starting index of first validation split
+             test1: Starting index of first testset split
+             data: Second index for training data
+             val2: Starting index of second validation split
+             test2: Starting index of second testset split
+             b: Last index of the data
+    """
+    half = int((b - a) / 2)
+    val_len = int(half * val_split)
+    test_len = int(half * test_split)
+    val1 = a + half - val_len - test_len
+    test1 = a + half - test_len
+    data = a + half
+    val2 = b - val_len - test_len
+    test2 = b - test_len
+    return a, val1, test1, data, val2, test2, b
+
+
+def split_dataset(dataset, splits: Sequence[int]):
+    """
+    Split dataset according to splits sequence. Use with split_indices function.
+    :param dataset: The dataset to split.
+    :param splits: A sequence holding the indices. Currently has to be of length 7.
+    :return: Three splits of the initial dataset holding training, validation and test data.
+    """
+    indices = pd.DataFrame((split_indices(splits[i], splits[i+1]) for i in range(len(splits) - 1)))
+    d1, v1, t1, d2, v2, t2 = ([dataset.iloc[a:b] for a, b in zip(indices.iloc[:,i], indices.iloc[:,i+1])]
+                              for i in range(len(indices.columns) - 1))
+    return pd.concat(d1 + d2), pd.concat(v1 + v2), pd.concat(t1 + t2)
 
 
 class Data:
@@ -67,6 +107,10 @@ class VIX(Data):
     @lazy
     def adjClose(self):
         return self.data_frame["Adj Close"]
+
+    @lazy
+    def normalized(self):
+        return (self.adjClose - self.adjClose.mean()) / self.adjClose.std()
 
 
 class Expirations(Data):
@@ -282,6 +326,80 @@ class MinutelyData:
                         np.append(y_fst[-(val_length+test_length):-test_length], y_snd[-(val_length+test_length):-test_length], axis=0))
         x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
                           np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
+        return (x_train, y_train), (x_val, y_val), (x_test, y_test)
+
+
+class FutureswiseLongPrice:
+    """
+    Alternative representation of LongPricesDataset.
+    Instead of mapping all legs of the term structure to all
+    futures' spreads at once this maps to only a single month's spread.
+    """
+    def __init__(self, hdf5_path):
+        self.x = pd.read_hdf(hdf5_path, "x")
+        self.y = pd.read_hdf(hdf5_path, "y")
+
+    def dataset(self):
+        return self.x.fillna(0).values, self.y.fillna(0).values
+
+    def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15):
+        split_between_years = np.append(0, self.y.index.get_loc(str(self.y.index[-1])) + 1)
+        x_train, x_val, x_test = split_dataset(self.x, split_between_years)
+        y_train, y_val, y_test = split_dataset(self.y, split_between_years)
+        x_train = x_train.fillna(0).values
+        y_train = y_train.fillna(0).values
+        x_val = x_val.fillna(0).values
+        y_val = y_val.fillna(0).values
+        x_test = x_test.fillna(0).values
+        y_test = y_test.fillna(0).values
+        return (x_train, y_train), (x_val, y_val), (x_test, y_test)
+
+
+class FuturesByMonth:
+    """
+    Another representation of long prices and the respective term structure.
+    With these data frames one can select futures by month (or by year but
+    that's rather silly).
+    """
+    def __init__(self, hdf5_path, vix_path):
+        self.x = pd.read_hdf(hdf5_path, "x")
+        self.y = pd.read_hdf(hdf5_path, "y")
+        self.vix = VIX(vix_path)
+
+    def dataset(self, month: int, diff=False):
+        """
+        Select a mapping x-y pair for a specific month.
+        :param month: Integer value between 1 and 12.
+        :return: Tuple with input data and target data.
+        """
+        x = self.x.copy()
+        x = x.loc(axis=0)[:, month]
+        if diff:
+            x = x.diff(axis=1).iloc[:,1:]
+            x.index = x.index.droplevel([0,1])
+            x = x.join(self.vix.normalized)
+            x = x.iloc[:, range(-1, 7)]
+        return x.fillna(0).values, self.y.loc(axis=0)[:, month].fillna(0).values
+
+    def splitted_dataset(self, month: int, validation_split: float=0.15, test_split: float=0.15,
+                         diff=False):
+        x, y = self.dataset(month, diff=diff)
+        assert len(x) == len(y)
+        val_length = int(len(x) * validation_split / 2)
+        test_length = int(len(x) * test_split / 2)
+        x_fst = x[:int(len(x) / 2)]
+        x_snd = x[int(len(x) / 2):]
+        y_fst = y[:int(len(y) / 2)]
+        y_snd = y[int(len(y) / 2):]
+        x_train, y_train = (np.append(x_fst[:-(val_length + test_length)], x_snd[:-(val_length + test_length)], axis=0),
+                            np.append(y_fst[:-(val_length + test_length)], y_snd[:-(val_length + test_length)], axis=0))
+        x_val, y_val = (np.append(x_fst[-(val_length + test_length):-test_length], x_snd[-(val_length + test_length):-test_length], axis=0),
+                        np.append(y_fst[-(val_length + test_length):-test_length], y_snd[-(val_length + test_length):-test_length], axis=0))
+        x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
+                          np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
+        y_train = np.expand_dims(y_train, axis=1)
+        y_val = np.expand_dims(y_val, axis=1)
+        y_test = np.expand_dims(y_test, axis=1)
         return (x_train, y_train), (x_val, y_val), (x_test, y_test)
 
 

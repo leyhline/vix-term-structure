@@ -25,6 +25,7 @@ class TestModels(unittest.TestCase):
         self.assertEqual(preds.shape, (2655, 6))
         self.assertEqual(np.all(preds, axis=0).sum(), 5)
         self.assertEqual(np.all(preds, axis=1).sum(), 2529)
+        self.assertEqual((preds == 0.).sum(), 126)
 
     def test_term_structure_to_spread_prices_v2(self):
         model = term_structure_to_spread_price_v2(5, 9)
