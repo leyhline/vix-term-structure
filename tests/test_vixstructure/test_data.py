@@ -304,6 +304,15 @@ class TestFuturesByMonth(unittest.TestCase):
             x, y = self.yearly_dataset.dataset(month)
             self.assertEqual(x.shape[1], 12)
 
+    def test_dataset_with_spreads(self):
+        for month in range (1, 13):
+            with self.assertRaises(AssertionError):
+                self.dataset.dataset(month, True, True)
+            x, y = self.dataset.dataset(month, False, True)
+            self.assertEqual(x.shape[1], 6)
+            x, y = self.yearly_dataset.dataset(month, False, True)
+            self.assertEqual(x.shape[1], 12)
+
 
 if __name__ == '__main__':
     unittest.main()

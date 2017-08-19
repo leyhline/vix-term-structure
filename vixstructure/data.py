@@ -368,15 +368,26 @@ class FuturesByMonth:
             self.x = pd.read_hdf(hdf5_path, "x")
         self.y = pd.read_hdf(hdf5_path, "y")
 
-    def dataset(self, month: int, diff=False):
+    def dataset(self, month: int, diff=False, spreads=False):
         """
         Select a mapping x-y pair for a specific month.
         :param month: Integer value between 1 and 12.
         :param diff: Get delta/difference over input values.
+        :param spreads: Use long spread prices as input instead of futures.
+                        Mutually exclusive to using diff.
         :return: Tuple with input data and target data.
         """
+        assert not (diff and spreads), "Can't pass diff=True and spreads=True at once."
         x = self.x.copy()
         x = x.loc(axis=0)[:, month]
+        if spreads:
+            if x.shape[1] == 8:  # This is the case for the classical term structure.
+                x = x.apply(lambda x: [np.nan] + [2 * x[i] - x[i - 1] - x[i + 1] for i in range(1, len(x) - 1)] + [np.nan],
+                            axis=1).iloc[:, 1:7]
+            elif x.shape[1] == 12:  # This is the case for the yearly term structure.
+                x = pd.concat([x] * 3, axis=1).iloc[:, 11:25]
+                x = x.apply(lambda x: [np.nan] + [2*x.iloc[i] - x.iloc[i-1] - x.iloc[i+1] for i in range(1, len(x) - 1)] + [np.nan],
+                            axis=1).iloc[:, 1:13]
         if diff:
             orig_width = x.shape[1]
             x = pd.concat([x]*3, axis=1)
@@ -386,8 +397,8 @@ class FuturesByMonth:
         return x.fillna(0).values, self.y.loc(axis=0)[:, month].fillna(0).values
 
     def splitted_dataset(self, month: int, validation_split: float=0.15, test_split: float=0.15,
-                         diff=False):
-        x, y = self.dataset(month, diff=diff)
+                         diff=False, spreads=False):
+        x, y = self.dataset(month, diff=diff, spreads=spreads)
         assert len(x) == len(y)
         val_length = int(len(x) * validation_split / 2)
         test_length = int(len(x) * test_split / 2)

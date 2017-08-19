@@ -31,6 +31,8 @@ parser.add_argument("-a", "--activation", default="relu", help="Activation funct
 parser.add_argument("--reduce_lr", action="store_true", help="If validation loss stagnates, reduce lr by sqrt(0.1).")
 parser.add_argument("--shuffle_off", action="store_false", help="Don't shuffle training data.")
 parser.add_argument("--yearly", action="store_true", help="Inputs x now always have 12 rows.")
+parser.add_argument("--diff", action="store_true", help="Take the delta of input before training.")
+parser.add_argument("--spreads", action="store_true", help="Use input to calculate spread prices before training.")
 
 
 def train(args):
@@ -40,15 +42,16 @@ def train(args):
         sys.exit(1)
     if args.yearly:
         input_data_length = 12
-        diff=True
     else:
-        input_data_length = 8
-        diff=True
+        if args.spreads:
+            input_data_length = 6
+        else:
+            input_data_length = 8
     model = models.term_structure_to_single_spread_price(args.network_depth, args.network_width,
                                                          args.dropout, input_data_length, args.activation)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
     dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5", yearly=args.yearly)
-    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(args.month, diff=diff)
+    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(args.month, diff=args.diff, spreads=args.spreads)
     model.compile(optimizer, "mean_squared_error")
     callbacks = []
     if args.save:
