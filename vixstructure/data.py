@@ -361,8 +361,11 @@ class FuturesByMonth:
     With these data frames one can select futures by month (or by year but
     that's rather silly).
     """
-    def __init__(self, hdf5_path):
-        self.x = pd.read_hdf(hdf5_path, "x")
+    def __init__(self, hdf5_path, yearly=False):
+        if yearly:
+            self.x = pd.read_hdf(hdf5_path, "x_yearly")
+        else:
+            self.x = pd.read_hdf(hdf5_path, "x")
         self.y = pd.read_hdf(hdf5_path, "y")
 
     def dataset(self, month: int, diff=False):
@@ -375,7 +378,11 @@ class FuturesByMonth:
         x = self.x.copy()
         x = x.loc(axis=0)[:, month]
         if diff:
-            x = x.diff(axis=1).iloc[:, 1:]
+            orig_width = x.shape[1]
+            x = pd.concat([x]*3, axis=1)
+            assert x.shape[1] == orig_width * 3
+            x = x.diff(axis=1).iloc[:, orig_width:2*orig_width]
+            assert x.shape[1] == orig_width
         return x.fillna(0).values, self.y.loc(axis=0)[:, month].fillna(0).values
 
     def splitted_dataset(self, month: int, validation_split: float=0.15, test_split: float=0.15,

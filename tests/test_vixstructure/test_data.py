@@ -253,6 +253,7 @@ class TestFutureswiseLongPrice(unittest.TestCase):
 class TestFuturesByMonth(unittest.TestCase):
     def setUp(self):
         self.dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5")
+        self.yearly_dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", yearly=True)
 
     def test_data_from_constructor(self):
         c1 = Counter(self.dataset.y.index.levels[2] - self.dataset.x.index.levels[2])
@@ -266,6 +267,7 @@ class TestFuturesByMonth(unittest.TestCase):
     def test_dataset(self):
         for month in range(1, 13):
             x, y = self.dataset.dataset(month)
+            self.assertEqual(x.shape[1], 8)
             self.assertEqual(len(x), len(y))
             self.assertGreater(len(y), 1200)
             self.assertLess(len(y), 1400)
@@ -289,7 +291,18 @@ class TestFuturesByMonth(unittest.TestCase):
             y_test_fst = y_test[:int(len(y_test) / 2)]
             y_test_snd = y_test[int(len(y_test) / 2):]
             y_full = np.concatenate([y_train_fst, y_val_fst, y_test_fst, y_train_snd, y_val_snd, y_test_snd], axis=0)
+            y = np.expand_dims(y, axis=1)
             self.assertTrue((y == y_full).all())
+
+    def test_dataset_diff(self):
+        for month in range(1, 13):
+            x, y = self.dataset.dataset(month, diff=True)
+            self.assertEqual(x.shape[1], 8)
+
+    def test_dataset_yearly(self):
+        for month in range(1, 13):
+            x, y = self.yearly_dataset.dataset(month)
+            self.assertEqual(x.shape[1], 12)
 
 
 if __name__ == '__main__':
