@@ -370,6 +370,7 @@ class FuturesByMonth:
         """
         Select a mapping x-y pair for a specific month.
         :param month: Integer value between 1 and 12.
+        :param diff: Get delta/difference over input values.
         :return: Tuple with input data and target data.
         """
         x = self.x.copy()
