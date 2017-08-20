@@ -10,6 +10,7 @@ to see what captures the existing data the best.
 from typing import Optional
 
 import tensorflow.contrib.keras as keras
+import numpy as np
 
 
 def selu(x):
@@ -86,7 +87,8 @@ def term_structure_to_spread_price_v2(hidden_layers, hidden_layer_width, dropout
 
 
 def term_structure_to_single_spread_price(hidden_layers, hidden_layer_width, dropout=None,
-                                          input_data_length=8, activation_function="relu"):
+                                          input_data_length=8, activation_function="relu",
+                                          reduce_width=False):
     """
     Predict only a single spread price instead of the whole set like above.
     """
@@ -96,8 +98,13 @@ def term_structure_to_single_spread_price(hidden_layers, hidden_layer_width, dro
         activation = getattr(keras.activations, activation_function)
     input = keras.layers.Input(shape=(input_data_length,), name="input")
     layer = input
-    for _ in range(hidden_layers):
-        layer = keras.layers.Dense(hidden_layer_width, activation=activation)(layer)
+    if reduce_width:
+        widths = np.linspace(hidden_layer_width, 1, hidden_layers + 1).round().astype(int)[:-1]
+        assert len(widths) == hidden_layers
+    else:
+        widths = [hidden_layer_width] * hidden_layers
+    for width in widths:
+        layer = keras.layers.Dense(width, activation=activation)(layer)
         if dropout:
             layer = keras.layers.Dropout(rate=dropout)(layer)
     output = keras.layers.Dense(1, name="output")(layer)

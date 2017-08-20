@@ -33,6 +33,7 @@ parser.add_argument("--shuffle_off", action="store_false", help="Don't shuffle t
 parser.add_argument("--yearly", action="store_true", help="Inputs x now always have 12 rows.")
 parser.add_argument("--diff", action="store_true", help="Take the delta of input before training.")
 parser.add_argument("--spreads", action="store_true", help="Use input to calculate spread prices before training.")
+parser.add_argument("--reduce_width", action="store_true", help="Linearly reduce hidden layers' width.")
 
 
 def train(args):
@@ -48,7 +49,8 @@ def train(args):
         else:
             input_data_length = 8
     model = models.term_structure_to_single_spread_price(args.network_depth, args.network_width,
-                                                         args.dropout, input_data_length, args.activation)
+                                                         args.dropout, input_data_length, args.activation,
+                                                         reduce_width=args.reduce_width)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
     dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5", yearly=args.yearly)
     (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(args.month, diff=args.diff, spreads=args.spreads)

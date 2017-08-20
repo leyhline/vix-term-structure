@@ -4,6 +4,7 @@ import tensorflow.contrib.keras as keras
 import numpy as np
 
 from vixstructure.models import term_structure_to_spread_price, term_structure_to_spread_price_v2
+from vixstructure.models import term_structure_to_single_spread_price
 from vixstructure.models import mask_output
 from vixstructure.data import LongPricesDataset
 
@@ -34,6 +35,13 @@ class TestModels(unittest.TestCase):
         self.assertEqual(preds.shape, (2655, 6))
         self.assertEqual(np.all(preds, axis=0).sum(), 5)
         self.assertEqual(np.all(preds, axis=1).sum(), 2529)
+
+    def test_term_structure_to_single_spread_price(self):
+        """Just test model construction."""
+        model = term_structure_to_single_spread_price(5, 9)
+        self.assertEqual([layer.output_shape[1] for layer in model.layers], [8, 9, 9, 9, 9, 9, 1])
+        model_reduced_widths = term_structure_to_single_spread_price(5, 9, reduce_width=True)
+        self.assertEqual([layer.output_shape[1] for layer in model_reduced_widths.layers], [8, 9, 7, 6, 4, 3, 1])
 
 
 if __name__ == '__main__':
