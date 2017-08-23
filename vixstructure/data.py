@@ -368,18 +368,26 @@ class FuturesByMonth:
             self.x = pd.read_hdf(hdf5_path, "x")
         self.y = pd.read_hdf(hdf5_path, "y")
 
-    def dataset(self, month: int, diff=False, spreads=False):
+    def dataset(self, month: int, diff=False, spreads=False, days_to_future=1):
         """
         Select a mapping x-y pair for a specific month.
         :param month: Integer value between 1 and 12.
         :param diff: Get delta/difference over input values.
         :param spreads: Use long spread prices as input instead of futures.
                         Mutually exclusive to using diff.
+        :param days_to_future: How many days to predict into future?
         :return: Tuple with input data and target data.
         """
         assert not (diff and spreads), "Can't pass diff=True and spreads=True at once."
         x = self.x.copy()
         x = x.loc(axis=0)[:, month]
+        y = self.y.copy()
+        y = y.loc(axis=0)[:, month]
+        assert 0 < days_to_future < 250
+        if days_to_future > 1:  # The data coming from the hdf file already assumes 1 day to future.
+            days_to_future -= 1
+            x = x.iloc[:-days_to_future]
+            y = y.iloc[days_to_future:]
         if spreads:
             if x.shape[1] == 8:  # This is the case for the classical term structure.
                 x = x.apply(lambda x: [np.nan] + [2 * x[i] - x[i - 1] - x[i + 1] for i in range(1, len(x) - 1)] + [np.nan],
@@ -394,11 +402,11 @@ class FuturesByMonth:
             assert x.shape[1] == orig_width * 3
             x = x.diff(axis=1).iloc[:, orig_width:2*orig_width]
             assert x.shape[1] == orig_width
-        return x.fillna(0).values, self.y.loc(axis=0)[:, month].fillna(0).values
+        return x.fillna(0).values, y.fillna(0).values
 
     def splitted_dataset(self, month: int, validation_split: float=0.15, test_split: float=0.15,
-                         diff=False, spreads=False):
-        x, y = self.dataset(month, diff=diff, spreads=spreads)
+                         diff=False, spreads=False, days_to_future=1):
+        x, y = self.dataset(month, diff=diff, spreads=spreads, days_to_future=days_to_future)
         assert len(x) == len(y)
         val_length = int(len(x) * validation_split / 2)
         test_length = int(len(x) * test_split / 2)

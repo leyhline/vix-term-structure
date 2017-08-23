@@ -34,6 +34,7 @@ parser.add_argument("--yearly", action="store_true", help="Inputs x now always h
 parser.add_argument("--diff", action="store_true", help="Take the delta of input before training.")
 parser.add_argument("--spreads", action="store_true", help="Use input to calculate spread prices before training.")
 parser.add_argument("--reduce_width", action="store_true", help="Linearly reduce hidden layers' width.")
+parser.add_argument("--days", type=int, default=1, help="How many days to predict into the future.")
 
 
 def train(args):
@@ -53,7 +54,8 @@ def train(args):
                                                          reduce_width=args.reduce_width)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
     dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5", yearly=args.yearly)
-    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(args.month, diff=args.diff, spreads=args.spreads)
+    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(args.month, diff=args.diff, spreads=args.spreads,
+                                                                     days_to_future=args.days)
     model.compile(optimizer, "mean_squared_error")
     callbacks = []
     if args.save:

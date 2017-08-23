@@ -313,6 +313,12 @@ class TestFuturesByMonth(unittest.TestCase):
             x, y = self.yearly_dataset.dataset(month, False, True)
             self.assertEqual(x.shape[1], 12)
 
+    def test_dataset_with_5_days_to_future(self):
+        x1, y1 = self.dataset.dataset(5, days_to_future=1)
+        x5, y5 = self.dataset.dataset(5, days_to_future=5)
+        self.assertEqual(len(x5), len(x1) - 4)
+        self.assertEqual(len(y5), len(y1) - 4)
+
 
 if __name__ == '__main__':
     unittest.main()
