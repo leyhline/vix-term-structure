@@ -15,6 +15,7 @@ setup(
     install_requires=['tensorflow',
                       'pandas',
                       'numpy',
+                      'scipy',
                       'jupyter',
                       'matplotlib',
                       'h5py',
