@@ -103,11 +103,23 @@ def term_structure_to_single_spread_price(hidden_layers, hidden_layer_width, dro
         assert len(widths) == hidden_layers
     else:
         widths = [hidden_layer_width] * hidden_layers
-    for width in widths:
-        layer = keras.layers.Dense(width, activation=activation)(layer)
+    for idx, width in enumerate(widths):
+        if activation_function == "selu":  # Use gaussian initialization in this case.
+            if idx == 0:
+                initializer = keras.initializers.RandomNormal(0.0, 1.0 / input_data_length)
+            else:
+                initializer = keras.initializers.RandomNormal(0.0, 1.0 / widths[idx - 1])
+            layer = keras.layers.Dense(width, activation=activation,
+                                       kernel_initializer=initializer)(layer)
+        else:
+            layer = keras.layers.Dense(width, activation=activation)(layer)
         if dropout:
             layer = keras.layers.Dropout(rate=dropout)(layer)
-    output = keras.layers.Dense(1, name="output")(layer)
+    if activation_function == "selu":
+        output = keras.layers.Dense(1, name="output",
+                                    kernel_initializer=keras.initializers.RandomNormal(0.0, 1.0 / widths[-1]))(layer)
+    else:
+        output = keras.layers.Dense(1, name="output")(layer)
     model = keras.models.Model(inputs=input, outputs=output)
     return model
 

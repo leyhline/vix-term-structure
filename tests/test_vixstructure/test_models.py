@@ -40,8 +40,26 @@ class TestModels(unittest.TestCase):
         """Just test model construction."""
         model = term_structure_to_single_spread_price(5, 9)
         self.assertEqual([layer.output_shape[1] for layer in model.layers], [8, 9, 9, 9, 9, 9, 1])
+        for distribution in (layer.kernel_initializer.distribution for layer in model.layers
+                             if isinstance(layer, keras.layers.Dense)):
+            self.assertEqual(distribution, "uniform")
         model_reduced_widths = term_structure_to_single_spread_price(5, 9, reduce_width=True)
         self.assertEqual([layer.output_shape[1] for layer in model_reduced_widths.layers], [8, 9, 7, 6, 4, 3, 1])
+        for distribution in (layer.kernel_initializer.distribution for layer in model_reduced_widths.layers
+                             if isinstance(layer, keras.layers.Dense)):
+            self.assertEqual(distribution, "uniform")
+
+    def test_term_structure_to_single_spread_price_with_selu(self):
+        model = term_structure_to_single_spread_price(5, 9, activation_function="selu")
+        self.assertEqual([layer.output_shape[1] for layer in model.layers], [8, 9, 9, 9, 9, 9, 1])
+        stddevs = [1 / layer.kernel_initializer.stddev for layer in model.layers
+                   if isinstance(layer, keras.layers.Dense)]
+        self.assertAlmostEqual(stddevs, [8, 9, 9, 9, 9, 9])
+        model_reduced_widths = term_structure_to_single_spread_price(5, 9, reduce_width=True, activation_function="selu")
+        self.assertEqual([layer.output_shape[1] for layer in model_reduced_widths.layers], [8, 9, 7, 6, 4, 3, 1])
+        stddevs_reduced_widths = [1 / layer.kernel_initializer.stddev for layer in model_reduced_widths.layers
+                                  if isinstance(layer, keras.layers.Dense)]
+        self.assertAlmostEqual(stddevs_reduced_widths, [8, 9, 7, 6, 4, 3])
 
 
 if __name__ == '__main__':
