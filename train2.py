@@ -35,6 +35,7 @@ parser.add_argument("--diff", action="store_true", help="Take the delta of input
 parser.add_argument("--spreads", action="store_true", help="Use input to calculate spread prices before training.")
 parser.add_argument("--reduce_width", action="store_true", help="Linearly reduce hidden layers' width.")
 parser.add_argument("--days", type=int, default=1, help="How many days to predict into the future.")
+parser.add_argument("-n", "--normalize", action="store_true")
 
 
 def train(args):
@@ -53,10 +54,19 @@ def train(args):
                                                          args.dropout, input_data_length, args.activation,
                                                          reduce_width=args.reduce_width)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
-    dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5", yearly=args.yearly)
-    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(args.month, diff=args.diff, spreads=args.spreads,
-                                                                     days_to_future=args.days)
-    model.compile(optimizer, "mean_squared_error")
+    dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5", args.month, yearly=args.yearly,
+                                  diff=args.diff, spreads=args.spreads, days_to_future=args.days)
+    if args.activation == "selu":
+        alpha = 1.6732632423543772848170429916717
+        scale = 1.0507009873554804934193349852946
+        fill_value = -scale * alpha
+    else:
+        fill_value = 0
+    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(fill_value=fill_value, normalized=args.normalize)
+    metrics = []
+    if args.normalize:
+        metrics.append(dataset.denorm_mse)
+    model.compile(optimizer, "mean_squared_error", metrics=metrics)
     callbacks = []
     if args.save:
         now = datetime.datetime.now()
