@@ -251,22 +251,10 @@ class TestFutureswiseLongPrice(unittest.TestCase):
 
 
 class TestFuturesByMonth(unittest.TestCase):
-    def setUp(self):
-        self.dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5")
-        self.yearly_dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", yearly=True)
-
-    def test_data_from_constructor(self):
-        c1 = Counter(self.dataset.y.index.levels[2] - self.dataset.x.index.levels[2])
-        c2 = Counter({pd.Timedelta(days=1): 2181,
-                      pd.Timedelta(days=2): 25,
-                      pd.Timedelta(days=3): 499,
-                      pd.Timedelta(days=4): 75,
-                      pd.Timedelta(days=5): 2})
-        self.assertTrue(c1 == c2)
-
     def test_dataset(self):
         for month in range(1, 13):
-            x, y = self.dataset.dataset(month)
+            dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", month)
+            x, y = dataset.dataset()
             self.assertEqual(x.shape[1], 8)
             self.assertEqual(len(x), len(y))
             self.assertGreater(len(y), 1200)
@@ -274,7 +262,8 @@ class TestFuturesByMonth(unittest.TestCase):
 
     def test_splitted_dataset(self):
         for month in range(1, 13):
-            (x_train, y_train), (x_val, y_val), (x_test, y_test) = self.dataset.splitted_dataset(month)
+            dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", month)
+            (x_train, y_train), (x_val, y_val), (x_test, y_test) = dataset.splitted_dataset()
             x_train_fst = x_train[:int(len(x_train) / 2)]
             x_train_snd = x_train[int(len(x_train) / 2):]
             x_val_fst = x_val[:int(len(x_val) / 2)]
@@ -282,7 +271,7 @@ class TestFuturesByMonth(unittest.TestCase):
             x_test_fst = x_test[:int(len(x_test) / 2)]
             x_test_snd = x_test[int(len(x_test) / 2):]
             x_full = np.concatenate([x_train_fst, x_val_fst, x_test_fst, x_train_snd, x_val_snd, x_test_snd], axis=0)
-            x, y = self.dataset.dataset(month)
+            x, y = dataset.dataset()
             self.assertTrue((x == x_full).all())
             y_train_fst = y_train[:int(len(y_train) / 2)]
             y_train_snd = y_train[int(len(y_train) / 2):]
@@ -296,28 +285,51 @@ class TestFuturesByMonth(unittest.TestCase):
 
     def test_dataset_diff(self):
         for month in range(1, 13):
-            x, y = self.dataset.dataset(month, diff=True)
+            dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", month, diff=True)
+            x, y = dataset.dataset()
             self.assertEqual(x.shape[1], 8)
 
     def test_dataset_yearly(self):
         for month in range(1, 13):
-            x, y = self.yearly_dataset.dataset(month)
+            dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", month, yearly=True)
+            x, y = dataset.dataset()
             self.assertEqual(x.shape[1], 12)
 
     def test_dataset_with_spreads(self):
         for month in range (1, 13):
             with self.assertRaises(AssertionError):
-                self.dataset.dataset(month, True, True)
-            x, y = self.dataset.dataset(month, False, True)
+                dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", month, diff=True, spreads=True)
+            dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", month, diff=False, spreads=True)
+            x, y = dataset.dataset()
             self.assertEqual(x.shape[1], 6)
-            x, y = self.yearly_dataset.dataset(month, False, True)
+            dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", month, diff=False, spreads=True, yearly=True)
+            x, y = dataset.dataset()
             self.assertEqual(x.shape[1], 12)
 
     def test_dataset_with_5_days_to_future(self):
-        x1, y1 = self.dataset.dataset(5, days_to_future=1)
-        x5, y5 = self.dataset.dataset(5, days_to_future=5)
+        dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", 5, days_to_future=1)
+        x1, y1 = dataset.dataset()
+        dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", 5, days_to_future=5)
+        x5, y5 = dataset.dataset()
         self.assertEqual(len(x5), len(x1) - 4)
         self.assertEqual(len(y5), len(y1) - 4)
+
+    def test_normalized_data(self):
+        for month in range(1, 13):
+            dataset = FuturesByMonth("../../data/futures_per_year_and_month.h5", month, yearly=True, spreads=True)
+            x, y = dataset.dataset(normalized=True)
+            self.assertEqual(x.shape[1], 12)
+            self.assertEqual(x.shape[0], y.shape[0])
+            self.assertAlmostEqual(np.mean(x), 0.0)
+            self.assertAlmostEqual(np.mean(y), 0.0)
+            self.assertLess(np.std(x), 1.0)
+            self.assertGreater(np.std(x), 0.5)
+            self.assertAlmostEqual(np.std(y), 1.0, places=3)
+            x_orig, y_orig = dataset.dataset(normalized=False)
+            x_denorm = dataset.denormalize_data(x, "x")
+            y_denorm = dataset.denormalize_data(y, "y")
+            self.assertAlmostEqual(np.mean(np.square(y_denorm - y_orig)), 0)
+            self.assertEqual(y_denorm.shape, y_orig.shape)
 
 
 if __name__ == '__main__':

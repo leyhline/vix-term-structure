@@ -361,29 +361,22 @@ class FuturesByMonth:
     With these data frames one can select futures by month (or by year but
     that's rather silly).
     """
-    def __init__(self, hdf5_path, yearly=False):
-        if yearly:
-            self.x = pd.read_hdf(hdf5_path, "x_yearly")
-        else:
-            self.x = pd.read_hdf(hdf5_path, "x")
-        self.y = pd.read_hdf(hdf5_path, "y")
-
-    def dataset(self, month: int, diff=False, spreads=False, days_to_future=1):
+    def __init__(self, hdf5_path, month, yearly=False,
+                 diff=False, spreads=False, days_to_future=1):
         """
-        Select a mapping x-y pair for a specific month.
+        :param hdf5_path: Path to data, stored as hdf5.
         :param month: Integer value between 1 and 12.
         :param diff: Get delta/difference over input values.
         :param spreads: Use long spread prices as input instead of futures.
                         Mutually exclusive to using diff.
         :param days_to_future: How many days to predict into future?
-        :return: Tuple with input data and target data.
         """
+        if yearly:
+            x = pd.read_hdf(hdf5_path, "x_yearly").loc(axis=0)[:, month]
+        else:
+            x = pd.read_hdf(hdf5_path, "x").loc(axis=0)[:, month]
+        y = pd.read_hdf(hdf5_path, "y").loc(axis=0)[:, month]
         assert not (diff and spreads), "Can't pass diff=True and spreads=True at once."
-        x = self.x.copy()
-        x = x.loc(axis=0)[:, month]
-        y = self.y.copy()
-        y = y.loc(axis=0)[:, month]
-        assert 0 < days_to_future < 250
         if days_to_future > 1:  # The data coming from the hdf file already assumes 1 day to future.
             days_to_future -= 1
             x = x.iloc[:-days_to_future]
@@ -402,11 +395,46 @@ class FuturesByMonth:
             assert x.shape[1] == orig_width * 3
             x = x.diff(axis=1).iloc[:, orig_width:2*orig_width]
             assert x.shape[1] == orig_width
-        return x.fillna(0).values, y.fillna(0).values
+        self.x = x
+        self.x_mean = x.mean()
+        self.x_std = x.std()
+        self.y = y
+        self.y_mean = y.mean()
+        self.y_std = y.std()
 
-    def splitted_dataset(self, month: int, validation_split: float=0.15, test_split: float=0.15,
-                         diff=False, spreads=False, days_to_future=1):
-        x, y = self.dataset(month, diff=diff, spreads=spreads, days_to_future=days_to_future)
+    def normalize_data(self, data, x_or_y):
+        if x_or_y == "y":
+            return (data - self.y_mean) / self.y_std
+        elif x_or_y == "x":
+            return (data - self.x_mean) / self.x_std
+        else:
+            raise RuntimeError("Pass an x OR an y here. Other values are not allowed.")
+
+    def denormalize_data(self, data, x_or_y):
+        if x_or_y == "y":
+            return data * self.y_std + self.y_mean
+        elif x_or_y == "x":
+            return data * self.x_std.fillna(1).values + self.x_mean.fillna(0).values
+        else:
+            raise RuntimeError("Pass an x OR an y here. Other values are not allowed.")
+
+    def denorm_mse(self, y_true, y_pred):
+        # See keras/losses.py
+        return keras.backend.mean(keras.backend.square(
+            self.denormalize_data(y_pred, "y") - self.denormalize_data(y_true, "y")), axis=-1)
+
+    def dataset(self, fill_value=0, normalized=False):
+        if normalized:
+            x = self.normalize_data(self.x, "x")
+            y = self.normalize_data(self.y, "y")
+        else:
+            x = self.x
+            y = self.y
+        return x.fillna(fill_value).values, y.fillna(fill_value).values
+
+    def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15,
+                         fill_value=0, normalized=False):
+        x, y = self.dataset(fill_value, normalized)
         assert len(x) == len(y)
         val_length = int(len(x) * validation_split / 2)
         test_length = int(len(x) * test_split / 2)
