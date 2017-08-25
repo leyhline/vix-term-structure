@@ -54,13 +54,15 @@ class TestModels(unittest.TestCase):
         self.assertEqual([layer.output_shape[1] for layer in model.layers], [8, 9, 9, 9, 9, 9, 1])
         vars = [np.square(layer.kernel_initializer.stddev) for layer in model.layers
                 if isinstance(layer, keras.layers.Dense)]
-        for fst, snd in zip(vars, [8, 9, 9, 9, 9, 9]):
+        self.assertAlmostEqual(1 / vars[0], 8 / 2)
+        for fst, snd in zip(vars[1:], [9, 9, 9, 9, 9]):
             self.assertAlmostEqual(1 / fst, snd)
         model_reduced_widths = term_structure_to_single_spread_price(5, 9, reduce_width=True, activation_function="selu")
         self.assertEqual([layer.output_shape[1] for layer in model_reduced_widths.layers], [8, 9, 7, 6, 4, 3, 1])
         vars_reduced_widths = [np.square(layer.kernel_initializer.stddev) for layer in model_reduced_widths.layers
                                if isinstance(layer, keras.layers.Dense)]
-        for fst, snd in zip(vars_reduced_widths, [8, 9, 7, 6, 4, 3]):
+        self.assertAlmostEqual(1 / vars[0], 8 / 2)
+        for fst, snd in zip(vars_reduced_widths[1:], [9, 7, 6, 4, 3]):
             self.assertAlmostEqual(1 / fst, snd)
 
 
