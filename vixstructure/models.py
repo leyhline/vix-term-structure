@@ -106,7 +106,7 @@ def term_structure_to_single_spread_price(hidden_layers, hidden_layer_width, dro
     for idx, width in enumerate(widths):
         if activation_function == "selu":  # Use gaussian initialization in this case.
             if idx == 0:
-                initializer = keras.initializers.RandomNormal(0.0, np.sqrt(1.0 / input_data_length))
+                initializer = keras.initializers.RandomNormal(0.0, np.sqrt(1.0 / (input_data_length / 2)))
             else:
                 initializer = keras.initializers.RandomNormal(0.0, np.sqrt(1.0 / widths[idx - 1]))
             layer = keras.layers.Dense(width, activation=activation,
@@ -114,7 +114,10 @@ def term_structure_to_single_spread_price(hidden_layers, hidden_layer_width, dro
         else:
             layer = keras.layers.Dense(width, activation=activation)(layer)
         if dropout:
-            layer = keras.layers.Dropout(rate=dropout)(layer)
+            if activation_function == "selu":
+                raise RuntimeError("Do not use dropout together with SELUs.")
+            else:
+                layer = keras.layers.Dropout(rate=dropout)(layer)
     if activation_function == "selu":
         initializer = keras.initializers.RandomNormal(0.0, np.sqrt(1.0 / widths[-1]))
         output = keras.layers.Dense(1, name="output", kernel_initializer=initializer)(layer)
