@@ -37,6 +37,8 @@ parser.add_argument("--reduce_width", action="store_true", help="Linearly reduce
 parser.add_argument("--days", type=int, default=1, help="How many days to predict into the future.")
 parser.add_argument("-n", "--normalize", action="store_true")
 parser.add_argument("--early_stopping", action="store_true")
+parser.add_argument("--leg", type=int, choices=[0, 1, 2, 3, 4, 5], default=None,
+                    help="Instead of selecting by month, select by term structure leg. Renders month parameter useless.")
 
 
 def train(args):
@@ -46,6 +48,8 @@ def train(args):
         sys.exit(1)
     if args.yearly:
         input_data_length = 12
+    elif args.leg:
+        input_data_length = 7
     else:
         if args.spreads:
             input_data_length = 6
@@ -55,15 +59,24 @@ def train(args):
                                                          args.dropout, input_data_length, args.activation,
                                                          reduce_width=args.reduce_width)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
-    dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5", args.month, yearly=args.yearly,
-                                  diff=args.diff, spreads=args.spreads, days_to_future=args.days)
     if args.activation == "selu":
         alpha = 1.6732632423543772848170429916717
         scale = 1.0507009873554804934193349852946
         fill_value = -scale * alpha
     else:
         fill_value = 0
-    (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(fill_value=fill_value, normalized=args.normalize)
+    if args.leg:
+        dataset = data.LongPricesDataset("data/8_m_settle.csv", "data/expirations.csv")
+        (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(normalize=args.normalize,
+                                                                         with_months=False,
+                                                                         with_days=False,
+                                                                         days_to_future=args.days,
+                                                                         leg=args.leg)
+    else:
+        dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5", args.month, yearly=args.yearly,
+                                      diff=args.diff, spreads=args.spreads, days_to_future=args.days)
+        (x_train, y_train), (x_val, y_val), _ = dataset.splitted_dataset(fill_value=fill_value,
+                                                                         normalized=args.normalize)
     metrics = []
     if args.normalize:
         metrics.append(dataset.denorm_mse)

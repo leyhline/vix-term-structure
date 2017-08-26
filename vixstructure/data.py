@@ -222,20 +222,12 @@ class LongPricesDataset:
                 y.iloc[days_to_future:].fillna(0).values)
 
     def splitted_dataset(self, validation_split: float=0.15, test_split: float=0.15,
-                         with_expirations=True, normalize=False,
-                         with_months=False, with_days=False,
-                         days_to_future=1) -> Tuple[Tuple[np.ndarray, np.ndarray],
-                                                    Tuple[np.ndarray, np.ndarray],
-                                                    Tuple[np.ndarray, np.ndarray]]:
+                         with_expirations=True, normalize=False, with_months=False, with_days=False,
+                         days_to_future=1, leg: int=None):
         """
         Split whole dataset into three parts: training set, cross validation set, test set.
         For the splits there are values used from the middle and from the end of the data to
         equal parts.
-        :param validation_split: How large is the part used for validation?
-        :param test_split: How large is the part used for testing?
-        :param with_expirations: Passed to dataset method.
-        :param normalize: Passed to dataset method.
-        :return: Three (x,y)-tuples for the three above mentioned dataset splits.
         """
         x, y = self.dataset(with_expirations=with_expirations, normalize=normalize,
                             with_months=with_months, with_days=with_days, days_to_future=days_to_future)
@@ -252,6 +244,13 @@ class LongPricesDataset:
                         np.append(y_fst[-(val_length+test_length):-test_length], y_snd[-(val_length+test_length):-test_length], axis=0))
         x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
                           np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
+        if leg:
+            y_train = np.expand_dims(y_train[:, leg], axis=1)
+            y_val = np.expand_dims(y_val[:, leg], axis=1)
+            y_test = np.expand_dims(y_test[:, leg], axis=1)
+            x_train = x_train[:, 1:-1]
+            x_val = x_val[:, 1:-1]
+            x_test = x_test[:, 1:-1]
         return (x_train, y_train), (x_val, y_val), (x_test, y_test)
 
 
