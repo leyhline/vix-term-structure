@@ -36,6 +36,7 @@ parser.add_argument("--spreads", action="store_true", help="Use input to calcula
 parser.add_argument("--reduce_width", action="store_true", help="Linearly reduce hidden layers' width.")
 parser.add_argument("--days", type=int, default=1, help="How many days to predict into the future.")
 parser.add_argument("-n", "--normalize", action="store_true")
+parser.add_argument("--early_stopping", action="store_true")
 
 
 def train(args):
@@ -81,7 +82,9 @@ def train(args):
             args.learning_rate)
         callbacks.append(keras.callbacks.CSVLogger(os.path.join(args.save, name + ".csv")))
     if args.reduce_lr:
-        callbacks.append(keras.callbacks.ReduceLROnPlateau(factor=sqrt(0.1), patience=100, verbose=1))
+        callbacks.append(keras.callbacks.ReduceLROnPlateau(factor=sqrt(0.1), patience=20, min_lr=0.0001, verbose=1))
+    if args.early_stopping:
+        callbacks.append(keras.callbacks.EarlyStopping(patience=22, verbose=1))
     model.fit(x_train, y_train, args.batch_size, args.epochs, verbose=0 if args.quiet else 2,
               validation_data=(x_val, y_val), callbacks=callbacks, shuffle=args.shuffle_off)
     if args.save:
