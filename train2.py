@@ -39,6 +39,7 @@ parser.add_argument("-n", "--normalize", action="store_true")
 parser.add_argument("--early_stopping", action="store_true")
 parser.add_argument("--leg", type=int, choices=[0, 1, 2, 3, 4, 5], default=None,
                     help="Instead of selecting by month, select by term structure leg. Renders month parameter useless.")
+parser.add_argument("--repeat", type=int, default=0)
 
 
 def train(args):
@@ -55,9 +56,6 @@ def train(args):
             input_data_length = 6
         else:
             input_data_length = 8
-    model = models.term_structure_to_single_spread_price(args.network_depth, args.network_width,
-                                                         args.dropout, input_data_length, args.activation,
-                                                         reduce_width=args.reduce_width)
     optimizer = getattr(keras.optimizers, args.optimizer)(lr=args.learning_rate)
     if args.activation == "selu":
         alpha = 1.6732632423543772848170429916717
@@ -80,31 +78,35 @@ def train(args):
     metrics = []
     if args.normalize:
         metrics.append(dataset.denorm_mse)
-    model.compile(optimizer, "mean_squared_error", metrics=metrics)
-    callbacks = []
-    if args.save:
-        now = datetime.datetime.now()
-        name = "{}_{}_depth{}_width{}_month{}_dropout{:.0e}_optim{}_lr{:.0e}".format(
-            now.strftime("%Y%m%d%H%M%S"),
-            socket.gethostname(),
-            args.network_depth,
-            args.network_width,
-            args.month,
-            0 if not args.dropout else args.dropout,
-            args.optimizer,
-            args.learning_rate)
-        callbacks.append(keras.callbacks.CSVLogger(os.path.join(args.save, name + ".csv")))
-    if args.reduce_lr:
-        callbacks.append(keras.callbacks.ReduceLROnPlateau(factor=sqrt(0.1), patience=20, min_lr=0.0001, verbose=1))
-    if args.early_stopping:
-        callbacks.append(keras.callbacks.EarlyStopping(patience=22, verbose=1))
-    model.fit(x_train, y_train, args.batch_size, args.epochs, verbose=0 if args.quiet else 2,
-              validation_data=(x_val, y_val), callbacks=callbacks, shuffle=args.shuffle_off)
-    if args.save:
-        try:
-            model.save_weights(os.path.join(args.save, name + ".h5"))
-        except FileNotFoundError as e:
-            print("Could not save the model.", str(e), file=sys.stderr)
+    for _ in range(args.repeat + 1):
+        model = models.term_structure_to_single_spread_price(args.network_depth, args.network_width,
+                                                             args.dropout, input_data_length, args.activation,
+                                                             reduce_width=args.reduce_width)
+        model.compile(optimizer, "mean_squared_error", metrics=metrics)
+        callbacks = []
+        if args.save:
+            now = datetime.datetime.now()
+            name = "{}_{}_depth{}_width{}_month{}_dropout{:.0e}_optim{}_lr{:.0e}".format(
+                now.strftime("%Y%m%d%H%M%S"),
+                socket.gethostname(),
+                args.network_depth,
+                args.network_width,
+                args.month,
+                0 if not args.dropout else args.dropout,
+                args.optimizer,
+                args.learning_rate)
+            callbacks.append(keras.callbacks.CSVLogger(os.path.join(args.save, name + ".csv")))
+        if args.reduce_lr:
+            callbacks.append(keras.callbacks.ReduceLROnPlateau(factor=sqrt(0.1), patience=20, min_lr=0.0001, verbose=1))
+        if args.early_stopping:
+            callbacks.append(keras.callbacks.EarlyStopping(patience=22, verbose=1))
+        model.fit(x_train, y_train, args.batch_size, args.epochs, verbose=0 if args.quiet else 2,
+                  validation_data=(x_val, y_val), callbacks=callbacks, shuffle=args.shuffle_off)
+        if args.save:
+            try:
+                model.save_weights(os.path.join(args.save, name + ".h5"))
+            except FileNotFoundError as e:
+                print("Could not save the model.", str(e), file=sys.stderr)
 
 
 if __name__ == "__main__":
