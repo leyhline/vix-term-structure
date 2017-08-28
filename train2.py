@@ -91,7 +91,7 @@ def train(args):
                 socket.gethostname(),
                 args.network_depth,
                 args.network_width,
-                args.month,
+                args.leg if args.leg else args.month,
                 0 if not args.dropout else args.dropout,
                 args.optimizer,
                 args.learning_rate)
