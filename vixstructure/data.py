@@ -245,9 +245,9 @@ class LongPricesDataset:
         x_test, y_test = (np.append(x_fst[-test_length:], x_snd[-test_length:], axis=0),
                           np.append(y_fst[-test_length:], y_snd[-test_length:], axis=0))
         if leg:
-            y_train = np.expand_dims(y_train[:, leg], axis=1)
-            y_val = np.expand_dims(y_val[:, leg], axis=1)
-            y_test = np.expand_dims(y_test[:, leg], axis=1)
+            y_train = np.expand_dims(y_train[:, leg-1], axis=1)
+            y_val = np.expand_dims(y_val[:, leg-1], axis=1)
+            y_test = np.expand_dims(y_test[:, leg-1], axis=1)
             x_train = x_train[:, 1:-1]
             x_val = x_val[:, 1:-1]
             x_test = x_test[:, 1:-1]

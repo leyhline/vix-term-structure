@@ -37,7 +37,7 @@ parser.add_argument("--reduce_width", action="store_true", help="Linearly reduce
 parser.add_argument("--days", type=int, default=1, help="How many days to predict into the future.")
 parser.add_argument("-n", "--normalize", action="store_true")
 parser.add_argument("--early_stopping", action="store_true")
-parser.add_argument("--leg", type=int, choices=[0, 1, 2, 3, 4, 5], default=None,
+parser.add_argument("--leg", action="store_true",
                     help="Instead of selecting by month, select by term structure leg. Renders month parameter useless.")
 parser.add_argument("--repeat", type=int, default=0)
 
@@ -69,7 +69,7 @@ def train(args):
                                                                          with_months=False,
                                                                          with_days=False,
                                                                          days_to_future=args.days,
-                                                                         leg=args.leg)
+                                                                         leg=args.month)
     else:
         dataset = data.FuturesByMonth("data/futures_per_year_and_month.h5", args.month, yearly=args.yearly,
                                       diff=args.diff, spreads=args.spreads, days_to_future=args.days)
@@ -91,7 +91,7 @@ def train(args):
                 socket.gethostname(),
                 args.network_depth,
                 args.network_width,
-                args.leg if args.leg else args.month,
+                args.month,
                 0 if not args.dropout else args.dropout,
                 args.optimizer,
                 args.learning_rate)
