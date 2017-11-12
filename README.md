@@ -9,4 +9,4 @@ mean they are suitable for every machine learning task.
 
 ## Written thesis
 
-Soon to come…
+[Predicting Spread Prices on VIX Futures with Deep Learning](thesis/thesis.pdf)
