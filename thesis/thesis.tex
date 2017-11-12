@@ -1,0 +1,110 @@
+% TODO Use 'features' instead of 'information'.
+
+\documentclass[abstract=true,caption=above]{scrreprt}
+\usepackage[utf8]{inputenc}
+\usepackage[american]{babel}
+
+\usepackage[backend=biber,style=numeric]{biblatex}
+\addbibresource{references.bib}
+
+\usepackage{graphicx}
+\graphicspath{ {images/} }
+\usepackage{subcaption}
+\setcapindent{0em}
+\usepackage{wrapfig}
+
+% \usepackage{endfloat}
+
+\usepackage{amsmath}
+
+% For tables exported from pandas.
+\usepackage{booktabs}
+
+% For typesetting urls.
+\usepackage[hidelinks]{hyperref}
+
+% Title Page
+\subject{Bachelor's Thesis}
+\title{Predicting Spread Prices on VIX Futures with Deep Learning}
+\author{Thomas Leyh}
+\date{September 8th, 2017}
+\publishers{\includegraphics[width=0.5\linewidth]{Uni_Logo-Grundversion_E1_A4_CMYK.pdf}\\
+			\vspace{1cm}
+			University of Freiburg \\
+			Department of Computer Science \\
+			Computer Vision Group \\
+			Prof. Dr. Thomas Brox}
+		
+\dedication{%
+	Many thanks to Konstantin Andreyev and Javdat Umarov from Beneficious Investment Management for introducing me to the world of finance and for all the advice they have given me.
+}
+
+\begin{document}
+	
+\maketitle
+
+\pagenumbering{gobble}
+
+\chapter*{Abstract}
+
+The CBOE's Volatility Index (VIX) is a popular measure of financial volatility. Since 2004 it is possible to trade futures directly on the index. This work explores ways to make predictions on these futures' prices with deep learning, a machine learning technique that became increasingly popular during the last few years. Focus of this work is the prediction of butterfly spread prices using only few inputs derived from the futures itself. Several approaches failed, leading to the conclusion that deep learning -- at least under these constraints -- will not yield satisfying results.
+
+\vspace{1in}
+
+\section*{Deutsche Übersetzung}
+
+Der CBOE's Volatility Index (VIX) stellt eine Messgröße zur Schwankungsanfälligkeit des S\&P~500 dar. Seit 2004 können auf diesem Index aufbauende Futures gehandelt werden. Thema dieser Arbeit ist die Vorhersage der entsprechenden Preise unter Verwendung von Deep Learning, einer seit Kurzem sehr populären Technik aus dem Repertoire des maschinellen Lernens. Insbesondere stehen sogenannte Butterfly Spreads im Fokus, deren zukünftige Preise allein aus den Futures selbst geschätzt werden sollen. Die unter diesen Bedingungen unternommenen Versuche schlugen fehl. Entsprechend ist zu erwarten, dass Deep Learning -- zumindest unter ähnlichen Bedingungen -- in diesem Bereich wenig erfolgversprechend ist.
+
+\chapter*{Declaration}
+
+I hereby declare, that I am the sole author and composer of my Thesis and that no other sources or learning aids, other than those listed, have been used. Furthermore, I declare that I have acknowledged the work of others by providing detailed references of said work.
+
+I hereby also declare, that my Thesis has not been prepared for another examination
+or assignment, either wholly or excerpts thereof.
+
+\parbox{\textwidth}{
+	\vspace{2cm}
+	\parbox{7cm}{
+		\rule{4cm}{1pt}\\
+		Place, date
+	}
+	\hfill
+	\parbox{7cm}{
+		\rule{6cm}{1pt}\\
+		Signature
+	}
+}
+
+\tableofcontents
+
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+\listoffigures
+\listoftables
+
+\chapter{Introduction}
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\input{chapters/introduction}
+
+\chapter[First approach: Predicting all spread prices at once]{First approach: \\  Predicting all spread prices at once}
+\label{ch:all-at-once}
+\input{chapters/experiments1}
+\chapter[Second approach: Predicting spread prices separately]{Second approach: \\ Predicting spread prices separately}
+\label{ch:one-at-once}
+\input{chapters/experiments2}
+
+\chapter{Conclusion}
+\input{chapters/conclusion}
+
+\printbibliography
+
+\appendix
+\chapter*{\centering Appendix}
+\addcontentsline{toc}{chapter}{Appendix}
+\newpage
+%\setcounter{chapter}{1}
+\input{chapters/appendix}
+
+\end{document}          
